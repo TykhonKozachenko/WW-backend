@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 06-create-card_reports-table
+      author: Vitalii
+      changes:
+        - createTable:
+            tableName: card_reports
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    foreignKeyName: fk_card_report_user
+                    references: users(id)
+                    nullable: false
+              - column:
+                  name: card_id
+                  type: bigint
+                  constraints:
+                    foreignKeyName: fk_card_report_card
+                    references: cards(id)
+              - column:
+                  name: time_stamp
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: deleted
+                  type: boolean
+                  defaultValue: false

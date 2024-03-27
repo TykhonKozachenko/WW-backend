@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 04-create-comments-table
+      author: Vitalii
+      changes:
+        - createTable:
+            tableName: comments
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_comments_users
+                    references: users(id)
+              - column:
+                  name: card_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_comments_cards
+                    references: cards(id)
+              - column:
+                  name: time_stamp
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: shown
+                  type: boolean
+                  defaultValue: true
+              - column:
+                  name: deleted
+                  type: boolean
+                  defaultValue: false

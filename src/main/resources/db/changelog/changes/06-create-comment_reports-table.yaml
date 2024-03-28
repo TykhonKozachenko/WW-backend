@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 05-create-comment_reports-table
+      id: 06-create-comment_reports-table
       author: Vitalii
       changes:
         - createTable:

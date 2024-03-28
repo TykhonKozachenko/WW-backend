@@ -25,47 +25,6 @@ databaseChangeLog:
                     foreignKeyName: fk_cards_filter_sets
                     references: filter_sets(id)
               - column:
-                  name: name
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-                    unique: true
-              - column:
-                  name: description
-                  type: TEXT
-                  constraints:
-                    nullable: false
-              - column:
-                  name: why_this_place
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: cost
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: image_links
-                  type: TEXT
-                  constraints:
-                    nullable: false
-              - column:
-                  name: map_link
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: latitude
-                  type: decimal(10,8)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: longitude
-                  type: decimal(11,8)
-                  constraints:
-                    nullable: false
-              - column:
                   name: likes
                   type: bigint
                   constraints:

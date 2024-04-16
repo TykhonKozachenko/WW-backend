@@ -1,11 +1,11 @@
-package wander.wise.application.service;
+package wander.wise.application.service.user;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import wander.wise.application.dto.user.CreateUserRequestDto;
 import wander.wise.application.dto.user.UserDto;
 import wander.wise.application.mapper.UserMapper;
-import wander.wise.application.repository.UserRepository;
+import wander.wise.application.repository.user.UserRepository;
 
 @Service
 @RequiredArgsConstructor

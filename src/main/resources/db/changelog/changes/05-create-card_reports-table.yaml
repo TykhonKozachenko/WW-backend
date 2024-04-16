@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 07-create-card_reports-table
+      id: 05-create-card_reports-table
       author: Vitalii
       changes:
         - createTable:
@@ -33,7 +33,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: text
-                  type: TEXT
+                  type: varchar(5000)
                   constraints:
                     nullable: false
               - column:

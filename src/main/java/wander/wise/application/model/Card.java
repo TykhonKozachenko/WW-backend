@@ -1,14 +1,20 @@
 package wander.wise.application.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
 import wander.wise.application.model.report.CardReport;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "cards")
@@ -20,16 +26,32 @@ public class Card {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "full_name", nullable = false, unique = true)
+    private String fullName;
     @Column(nullable = false)
-    private String author;
-    @ManyToOne()
-    private FilterSet filterSet;
-    @OneToOne (mappedBy = "card", cascade = CascadeType.ALL)
-    private CardItem cardItem;
-    private Long likes;
-    @OneToMany(mappedBy = "card")
+    private String author = "AI";
+    @Column(name = "trip_types", nullable = false)
+    private String tripTypes;
+    @Column(nullable = false)
+    private String climate;
+    @Column(name = "special_requirements", nullable = false)
+    private String specialRequirements;
+    @Column(nullable = false)
+    private String description;
+    @Column(name = "why_this_place", nullable = false)
+    private String whyThisPlace;
+    @Column(name = "image_links", nullable = false)
+    private String imageLinks;
+    @Column(name = "map_link", nullable = false)
+    private String mapLink;
+    @Column(nullable = false)
+    private double latitude;
+    @Column(nullable = false)
+    private double longitude;
+    private Long likes = 0L;
+    @OneToMany(mappedBy = "card", fetch = FetchType.EAGER)
     private Set<Comment> comments = new HashSet<>();
-    @OneToMany(mappedBy = "card")
+    @OneToMany(mappedBy = "card", fetch = FetchType.EAGER)
     private Set<CardReport> reports = new HashSet<>();
-    private boolean shown = false;
+    private boolean shown = true;
 }

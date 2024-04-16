@@ -1,12 +1,17 @@
 package wander.wise.application.model.report;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MappedSuperclass;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
 import wander.wise.application.model.User;
-import java.time.LocalDateTime;
 
 @MappedSuperclass
 @Setter

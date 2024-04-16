@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 05-create-comments-table
+      id: 04-create-comments-table
       author: Vitalii
       changes:
         - createTable:
@@ -33,9 +33,15 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: text
-                  type: TEXT
+                  type: varchar(5000)
                   constraints:
                     nullable: false
+              - column:
+                  name: stars
+                  type: int
+                  constraints:
+                    nullable: false
+                    defaultValue: 5
               - column:
                   name: shown
                   type: boolean

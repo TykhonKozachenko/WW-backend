@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import wander.wise.application.dto.user.CreateUserRequestDto;
 import wander.wise.application.dto.user.UserDto;
-import wander.wise.application.service.UserService;
+import wander.wise.application.service.user.UserService;
 
 @RestController
 @RequestMapping("/auth")

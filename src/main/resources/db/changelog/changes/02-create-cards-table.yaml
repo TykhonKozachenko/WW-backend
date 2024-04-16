@@ -1,62 +1,84 @@
 databaseChangeLog:
   - changeSet:
-      id: 04-create-card_items-table
+      id: 02-create-cards-table
       author: Vitalii
       changes:
         - createTable:
-            tableName: card_items
+            tableName: cards
             columns:
               - column:
                   name: id
                   type: bigint
+                  autoIncrement: true
                   constraints:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: card_id
-                  type: bigint
-                  constraints:
-                    nullable: false
-                    foreignKeyName: fk_card_items_card
-                    references: cards(id)
-              - column:
-                  name: name
-                  type: varchar(255)
+                  name: full_name
+                  type: varchar(500)
                   constraints:
                     nullable: false
                     unique: true
               - column:
-                  name: description
+                  name: author
                   type: varchar(255)
+                  defaultValue: 'AI'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trip_types
+                  type: varchar(1000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: climate
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: special_requirements
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
                   constraints:
                     nullable: false
               - column:
                   name: why_this_place
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: cost
-                  type: varchar(255)
+                  type: TEXT
                   constraints:
                     nullable: false
               - column:
                   name: image_links
-                  type: varchar(255)
+                  type: TEXT
                   constraints:
                     nullable: false
               - column:
                   name: map_link
-                  type: varchar(255)
+                  type: varchar(1000)
                   constraints:
                     nullable: false
               - column:
                   name: latitude
-                  type: decimal(19,2)
+                  type: float
                   constraints:
                     nullable: false
               - column:
                   name: longitude
-                  type: decimal(19,2)
+                  type: float
                   constraints:
                     nullable: false
+              - column:
+                  name: likes
+                  type: bigint
+                  defaultValue: 0
+              - column:
+                  name: shown
+                  type: boolean
+                  defaultValue: true
+              - column:
+                  name: deleted
+                  type: boolean
+                  defaultValue: false

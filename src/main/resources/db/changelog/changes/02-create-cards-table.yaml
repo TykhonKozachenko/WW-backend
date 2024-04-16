@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 03-create-cards-table
+      id: 02-create-cards-table
       author: Vitalii
       changes:
         - createTable:
@@ -14,22 +14,32 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: author
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: filter_set_id
-                  type: bigint
-                  constraints:
-                    foreignKeyName: fk_cards_filter_sets
-                    references: filter_sets(id)
-              - column:
-                  name: name
-                  type: varchar(255)
+                  name: full_name
+                  type: varchar(500)
                   constraints:
                     nullable: false
                     unique: true
+              - column:
+                  name: author
+                  type: varchar(255)
+                  defaultValue: 'AI'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trip_types
+                  type: varchar(1000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: climate
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: special_requirements
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
               - column:
                   name: description
                   type: TEXT
@@ -37,12 +47,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: why_this_place
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: cost
-                  type: varchar(255)
+                  type: TEXT
                   constraints:
                     nullable: false
               - column:
@@ -52,28 +57,27 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: map_link
-                  type: varchar(255)
+                  type: varchar(1000)
                   constraints:
                     nullable: false
               - column:
                   name: latitude
-                  type: decimal(10,8)
+                  type: float
                   constraints:
                     nullable: false
               - column:
                   name: longitude
-                  type: decimal(11,8)
+                  type: float
                   constraints:
                     nullable: false
               - column:
                   name: likes
                   type: bigint
-                  constraints:
-                    nullable: false
+                  defaultValue: 0
               - column:
                   name: shown
                   type: boolean
-                  defaultValue: false
+                  defaultValue: true
               - column:
                   name: deleted
                   type: boolean

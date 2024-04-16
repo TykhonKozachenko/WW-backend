@@ -1,13 +1,20 @@
 package wander.wise.application.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
 import wander.wise.application.model.report.CommentReport;
-import java.time.LocalDateTime;
-import java.util.Set;
 
 @Entity
 @Table(name = "comments")
@@ -27,8 +34,8 @@ public class Comment {
     private LocalDateTime timeStamp;
     @Column(nullable = false)
     private String text;
+    private Integer stars = 5;
     @OneToMany(mappedBy = "comment")
     private Set<CommentReport> reports;
     private boolean shown = true;
 }
-

@@ -1,14 +1,15 @@
 databaseChangeLog:
   - changeSet:
-      id: 04-create-comments-table
+      id: 05-create-card_reports-table
       author: Vitalii
       changes:
         - createTable:
-            tableName: comments
+            tableName: card_reports
             columns:
               - column:
                   name: id
                   type: bigint
+                  autoIncrement: true
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -16,15 +17,14 @@ databaseChangeLog:
                   name: user_id
                   type: bigint
                   constraints:
-                    nullable: false
-                    foreignKeyName: fk_comments_users
+                    foreignKeyName: fk_card_report_user
                     references: users(id)
+                    nullable: false
               - column:
                   name: card_id
                   type: bigint
                   constraints:
-                    nullable: false
-                    foreignKeyName: fk_comments_cards
+                    foreignKeyName: fk_card_report_card
                     references: cards(id)
               - column:
                   name: time_stamp
@@ -33,13 +33,9 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: text
-                  type: TEXT
+                  type: varchar(5000)
                   constraints:
                     nullable: false
-              - column:
-                  name: shown
-                  type: boolean
-                  defaultValue: true
               - column:
                   name: deleted
                   type: boolean

@@ -35,4 +35,3 @@ services:
         "spring.datasource.password" : "$MYSQL_PASSWORD",
         "spring.jpa.properties.hibernate.dialect" : "org.hibernate.dialect.MySQL8Dialect"
       }'
-      JAVA_TOOL_OPTIONLS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"

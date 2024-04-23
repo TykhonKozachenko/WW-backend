@@ -34,3 +34,4 @@ build/
 
 ### Secret variables ###
 secrets.properties
+.env

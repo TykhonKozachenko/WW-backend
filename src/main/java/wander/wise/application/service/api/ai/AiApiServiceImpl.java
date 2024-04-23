@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import wander.wise.application.dto.ai.AiResponseDto;
 import wander.wise.application.dto.ai.LocationListDto;
 import wander.wise.application.dto.card.CardSearchParameters;
-import wander.wise.application.exception.AiException;
+import wander.wise.application.exception.custom.AiException;
 
 @Service
 @RequiredArgsConstructor

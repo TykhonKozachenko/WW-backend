@@ -4,7 +4,7 @@ import java.util.Set;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import wander.wise.application.dto.CommentDto;
+import wander.wise.application.dto.comment.CommentDto;
 
 @Data
 @ToString
@@ -24,4 +24,5 @@ public class CardDto {
     private int distance;
     private Long likes;
     private Set<CommentDto> comments;
+    private boolean shown;
 }

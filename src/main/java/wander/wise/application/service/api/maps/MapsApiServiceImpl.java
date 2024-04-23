@@ -15,8 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import wander.wise.application.config.ApisConfigProperties;
-import wander.wise.application.dto.maps.MapsResponseDto;
-import wander.wise.application.exception.MapsException;
+import wander.wise.application.dto.maps.LocationDto;
+import wander.wise.application.exception.custom.MapsException;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +26,7 @@ public class MapsApiServiceImpl implements MapsApiService {
     private final ApisConfigProperties apisConfigProperties;
 
     @Override
-    public MapsResponseDto getMapsResponseByLocationName(String searchKey) {
+    public LocationDto getMapsResponseByLocationName(String searchKey) {
         String formattedKey = searchKey.replaceAll(" ", "+");
         ResponseEntity<String> response = getMapsStringResponseEntity(formattedKey);
         JsonNode root = convertMapsResponseToJson(response);
@@ -34,7 +34,7 @@ public class MapsApiServiceImpl implements MapsApiService {
     }
 
     @Override
-    public MapsResponseDto getMapsResponseByUsersUrl(String usersUrl) {
+    public LocationDto getMapsResponseByUsersUrl(String usersUrl) {
         //TODO: make order in this method
         String longUrl = null;
         double latitude = 0;
@@ -64,7 +64,7 @@ public class MapsApiServiceImpl implements MapsApiService {
             latitude = Math.floor(Double.parseDouble(coordinatesArray[0]) * SCALE) / SCALE;
             longitude = Math.floor(Double.parseDouble(coordinatesArray[1]) * SCALE) / SCALE;
         }
-        return new MapsResponseDto(longUrl, latitude, longitude);
+        return new LocationDto(longUrl, latitude, longitude);
     }
 
     private String getRedirectUrl(String usersUrl) throws IOException {
@@ -104,13 +104,13 @@ public class MapsApiServiceImpl implements MapsApiService {
         return response;
     }
 
-    private static MapsResponseDto parseCoordinatesAndCreateMapsResponseDto(
+    private static LocationDto parseCoordinatesAndCreateMapsResponseDto(
             String formattedKey, JsonNode root) {
         String mapLink = "https://maps.google.com/maps?q=" + formattedKey;
         JsonNode location = root.path("results").path(0).path("geometry").path("location");
         double latitude = Math.floor(location.path("lat").asDouble() * SCALE) / SCALE;
         double longitude = Math.floor(location.path("lng").asDouble() * SCALE) / SCALE;
-        return new MapsResponseDto(mapLink, latitude, longitude);
+        return new LocationDto(mapLink, latitude, longitude);
     }
 
     private static JsonNode convertMapsResponseToJson(ResponseEntity<String> response) {

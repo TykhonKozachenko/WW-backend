@@ -5,10 +5,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import wander.wise.application.config.MapperConfig;
 import wander.wise.application.dto.ai.AiResponseDto;
 import wander.wise.application.dto.card.CardDto;
+import wander.wise.application.dto.card.CardWithoutDistanceDto;
+import wander.wise.application.dto.card.CreateCardRequestDto;
 import wander.wise.application.model.Card;
 
 @Mapper(config = MapperConfig.class, uses = {CommentMapper.class})
@@ -31,6 +34,26 @@ public interface CardMapper {
             qualifiedByName = "toCommentDtoSet")
     CardDto toDto(Card card);
 
+    @Mapping(target = "name", source = "fullName",
+            qualifiedByName = "fullNameToName")
+    @Mapping(target = "whereIs", source = "fullName",
+            qualifiedByName = "fullNameToWhereIs")
+    @Mapping(target = "tripTypes", source = "tripTypes",
+            qualifiedByName = "stringToSet")
+    @Mapping(target = "specialRequirements", source = "specialRequirements",
+            qualifiedByName = "stringToSet")
+    @Mapping(target = "whyThisPlace", source = "whyThisPlace",
+            qualifiedByName = "stringToSet")
+    @Mapping(target = "imageLinks", source = "imageLinks",
+            qualifiedByName = "stringToSet")
+    @Mapping(target = "comments", source = "card.comments",
+            qualifiedByName = "toCommentDtoSet")
+    CardWithoutDistanceDto toCardWithoutDistanceDto(Card card);
+
+    Card toModel(CreateCardRequestDto requestDto);
+
+    Card updateCardFromRequestDto(@MappingTarget Card card, CreateCardRequestDto requestDto);
+
     @Named("stringToSet")
     default Set<String> stringToSet(String field) {
         return Arrays.stream(field.split("\\|"))
@@ -51,5 +74,12 @@ public interface CardMapper {
                 fullNameArray.length))
                 .replace("[", "")
                 .replace("]", "");
+    }
+
+    @Named("cardsToCardWithoutDistanceDtos")
+    default Set<CardWithoutDistanceDto> cardsToCardWithoutDistanceDtos(Set<Card> cards) {
+        return cards.stream()
+                .map(this::toCardWithoutDistanceDto)
+                .collect(Collectors.toSet());
     }
 }

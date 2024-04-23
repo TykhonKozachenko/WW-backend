@@ -9,12 +9,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
-import wander.wise.application.model.report.CardReport;
 
 @Entity
 @Table(name = "cards")
@@ -49,9 +49,54 @@ public class Card {
     @Column(nullable = false)
     private double longitude;
     private Long likes = 0L;
+    private Long reports = 0L;
     @OneToMany(mappedBy = "card", fetch = FetchType.EAGER)
     private Set<Comment> comments = new HashSet<>();
-    @OneToMany(mappedBy = "card", fetch = FetchType.EAGER)
-    private Set<CardReport> reports = new HashSet<>();
     private boolean shown = true;
+    public Card(Long id) {
+        this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Card card)) return false;
+        return Double.compare(latitude, card.latitude) == 0
+                && Double.compare(longitude, card.longitude) == 0
+                && shown == card.shown
+                && Objects.equals(id, card.id)
+                && Objects.equals(fullName, card.fullName)
+                && Objects.equals(author, card.author)
+                && Objects.equals(tripTypes, card.tripTypes)
+                && Objects.equals(climate, card.climate)
+                && Objects.equals(specialRequirements, card.specialRequirements)
+                && Objects.equals(description, card.description)
+                && Objects.equals(whyThisPlace, card.whyThisPlace)
+                && Objects.equals(imageLinks, card.imageLinks)
+                && Objects.equals(mapLink, card.mapLink)
+                && Objects.equals(likes, card.likes)
+                && Objects.equals(reports, card.reports)
+                && Objects.equals(comments, card.comments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                id,
+                fullName,
+                author,
+                tripTypes,
+                climate,
+                specialRequirements,
+                description,
+                whyThisPlace,
+                imageLinks,
+                mapLink,
+                latitude,
+                longitude,
+                likes,
+                reports,
+                comments,
+                shown);
+    }
 }

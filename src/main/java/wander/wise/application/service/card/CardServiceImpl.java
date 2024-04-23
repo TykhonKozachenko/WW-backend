@@ -6,23 +6,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import wander.wise.application.dto.ai.AiResponseDto;
-import wander.wise.application.dto.card.CardDto;
-import wander.wise.application.dto.card.CardSearchParameters;
-import wander.wise.application.dto.card.CardWithoutDistanceDto;
-import wander.wise.application.dto.card.CreateCardRequestDto;
-import wander.wise.application.dto.maps.MapsResponseDto;
-import wander.wise.application.exception.CardSearchException;
+import wander.wise.application.dto.card.*;
+import wander.wise.application.dto.maps.LocationDto;
+import wander.wise.application.exception.custom.AuthorizationException;
+import wander.wise.application.exception.custom.CardSearchException;
 import wander.wise.application.mapper.CardMapper;
 import wander.wise.application.model.Card;
+import wander.wise.application.model.Collection;
+import wander.wise.application.model.User;
 import wander.wise.application.repository.card.CardRepository;
 import wander.wise.application.repository.card.CardSpecificationBuilder;
+import wander.wise.application.repository.collection.CollectionRepository;
+import wander.wise.application.repository.user.UserRepository;
 import wander.wise.application.service.api.ai.AiApiService;
+import wander.wise.application.service.api.email.EmailService;
 import wander.wise.application.service.api.images.ImageSearchApiService;
 import wander.wise.application.service.api.maps.MapsApiService;
 
@@ -38,15 +43,179 @@ public class CardServiceImpl implements CardService {
     private final CardRepository cardRepository;
     private final CardMapper cardMapper;
     private final CardSpecificationBuilder cardSpecificationBuilder;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final CollectionRepository collectionRepository;
 
     @Override
-    public CardWithoutDistanceDto saveCard(CreateCardRequestDto requestDto) {
-        return null;
+    public CardWithoutDistanceDto createNewCard(String email, CreateCardRequestDto requestDto) {
+        User author = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find user by email: " + email));
+        if (!author.isBanned()) {
+            Card savedCard = cardRepository.save(initializeUsersCard(requestDto, author));
+            Collection updatedSavedCards = collectionRepository.findAllByUserEmail(email)
+                    .stream()
+                    .filter(collection -> collection.getName().equals("Created cards"))
+                    .findFirst()
+                    .get();
+            updatedSavedCards.getCards().add(savedCard);
+            collectionRepository.save(updatedSavedCards);
+            return cardMapper.toCardWithoutDistanceDto(savedCard);
+        } else {
+            throw new AuthorizationException("Access denied. User is banned.");
+        }
     }
 
     @Override
-    public List<CardWithoutDistanceDto> saveAll(List<CreateCardRequestDto> requestDtos) {
-        return List.of();
+    public CardWithoutDistanceDto updateById(Long id, String email, CreateCardRequestDto requestDto) {
+        Card updatedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        User updatingUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find user by email: " + email));
+        if (updatingUser.getAuthorities().size() > 1
+                || (updatedCard.getAuthor()
+                .equals(updatingUser.getPseudonym())
+                && !updatingUser.isBanned())) {
+            updatedCard = cardMapper.updateCardFromRequestDto(updatedCard, requestDto);
+            return cardMapper.toCardWithoutDistanceDto(cardRepository.save(updatedCard));
+        } else {
+            throw new AuthorizationException("Access denied.");
+        }
+    }
+
+    @Override
+    public CardWithoutDistanceDto findById(Long id) {
+        return cardMapper.toCardWithoutDistanceDto(cardRepository.findById(id)
+                .filter(Card::isShown).orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id)));
+    }
+
+    @Override
+    public CardWithoutDistanceDto findByIdAsAdmin(Long id) {
+        return cardMapper.toCardWithoutDistanceDto(cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id)));
+    }
+
+    @Override
+    public void addCardToSaved(Long id, String email) {
+        Card addedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        Collection updatedSavedCards = collectionRepository.findAllByUserEmail(email)
+                .stream()
+                .filter(collection -> collection.getName().equals("Saved cards"))
+                .findFirst()
+                .get();
+        updatedSavedCards.getCards().add(addedCard);
+        collectionRepository.save(updatedSavedCards);
+    }
+
+    @Override
+    public void removeCardFromSaved(Long id, String email) {
+        Card removedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        Collection updatedSavedCards = collectionRepository.findAllByUserEmail(email)
+                .stream()
+                .filter(collection -> collection.getName().equals("Saved cards"))
+                .findFirst()
+                .get();
+        updatedSavedCards.getCards().remove(removedCard);
+        collectionRepository.save(updatedSavedCards);
+    }
+
+    @Override
+    public void postLike(Long id, String email) {
+        Card likedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        likedCard.setLikes(likedCard.getLikes() + 1);
+        cardRepository.save(likedCard);
+        Collection updatedLikedCards = collectionRepository.findAllByUserEmail(email)
+                .stream()
+                .filter(collection -> collection.getName().equals("Liked cards"))
+                .findFirst()
+                .get();
+        updatedLikedCards.getCards().add(likedCard);
+        collectionRepository.save(updatedLikedCards);
+    }
+
+    @Override
+    public void removeLike(Long id, String email) {
+        Card likedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        Collection updatedLikedCards = collectionRepository.findAllByUserEmail(email)
+                .stream()
+                .filter(collection -> collection.getName().equals("Liked cards"))
+                .findFirst()
+                .get();
+        updatedLikedCards.getCards().remove(likedCard);
+        collectionRepository.save(updatedLikedCards);
+        likedCard.setLikes(likedCard.getLikes() - 1);
+        cardRepository.save(likedCard);
+    }
+
+    @Override
+    public void hideCard(Long id) {
+        Card hiddenCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        hiddenCard.setShown(false);
+        cardRepository.save(hiddenCard);
+    }
+
+    @Override
+    public void revealCard(Long id) {
+        Card revealedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        revealedCard.setShown(true);
+        cardRepository.save(revealedCard);
+    }
+
+    @Override
+    public void deleteById(Long id, String email) {
+        Card updatedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        User updatingUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find user by email: " + email));
+        if (updatingUser.getAuthorities().size() > 1
+                || updatedCard.getAuthor()
+                .equals(updatingUser.getPseudonym())) {
+            cardRepository.deleteById(id);
+        } else {
+            throw new AuthorizationException("Access denied.");
+        }
+    }
+
+    @Override
+    public void report(Long id, String email, ReportCardRequestDto requestDto) {
+        Card reportedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        reportedCard.setReports(reportedCard.getReports() + 1);
+        String message = new StringBuilder()
+                .append("User email: ").append(email)
+                .append(System.lineSeparator())
+                .append("Card link: ").append(requestDto.cardLink())
+                .append(System.lineSeparator())
+                .append("Report text: ").append(requestDto.text())
+                .append(System.lineSeparator())
+                .append("Card was reported: ")
+                .append(reportedCard.getReports()).append(" times")
+                .toString();
+        emailService.sendEmail(
+                "budzetbudzet4@gmail.com",
+                "Report for card " + reportedCard.getFullName(),
+                message);
+        cardRepository.save(reportedCard);
     }
 
     @Override
@@ -59,7 +228,7 @@ public class CardServiceImpl implements CardService {
                 cardSpec,
                 pageable,
                 INITIAL_ATTEMPTS);
-        MapsResponseDto startLocationCoordinates = mapsApiService
+        LocationDto startLocationCoordinates = mapsApiService
                 .getMapsResponseByLocationName(searchParams.startLocation());
         return initializeCardDtos(
                 foundCards,
@@ -71,7 +240,9 @@ public class CardServiceImpl implements CardService {
             Specification<Card> cardSpec,
             Pageable pageable,
             int attempts) {
-        List<Card> foundCards = findCards(cardSpec);
+        List<Card> foundCards = findCards(cardSpec).stream()
+                .filter(Card::isShown)
+                .toList();
         if (foundCards.size() < getRequiredCardsAmount(pageable)
                 && isAiCardsRequired(searchParams)
                 && attempts < MAX_ATTEMPTS) {
@@ -127,13 +298,13 @@ public class CardServiceImpl implements CardService {
             return null;
         }
         String searchKey = getSearchKey(fullName);
-        MapsResponseDto mapsResponseDto = mapsApiService
+        LocationDto locationDto = mapsApiService
                 .getMapsResponseByLocationName(searchKey);
-        if (isValidLocation(mapsResponseDto)) {
+        if (isValidLocation(locationDto)) {
             return fillNewCard(
                     aiResponseDto,
                     searchKey,
-                    mapsResponseDto);
+                    locationDto);
         }
         return null;
     }
@@ -141,19 +312,19 @@ public class CardServiceImpl implements CardService {
     private Card fillNewCard(
             AiResponseDto aiResponseDto,
             String searchKey,
-            MapsResponseDto mapsResponseDto) {
+            LocationDto locationDto) {
         String imageLinks = imageSearchApiService.getImageLinks(searchKey);
         Card newCard = cardMapper.aiResponseToCard(aiResponseDto);
         newCard.setImageLinks(imageLinks);
-        newCard.setMapLink(mapsResponseDto.mapLink());
-        newCard.setLatitude(mapsResponseDto.latitude());
-        newCard.setLongitude(mapsResponseDto.longitude());
+        newCard.setMapLink(locationDto.mapLink());
+        newCard.setLatitude(locationDto.latitude());
+        newCard.setLongitude(locationDto.longitude());
         return newCard;
     }
 
     private List<CardDto> initializeCardDtos(
             List<Card> foundCards,
-            MapsResponseDto startLocationCoordinates) {
+            LocationDto startLocationCoordinates) {
         return foundCards.stream()
                 .map(card -> {
                     CardDto cardDto = cardMapper.toDto(card);
@@ -165,7 +336,7 @@ public class CardServiceImpl implements CardService {
 
     private int findDistance(
             Card card,
-            MapsResponseDto startLocationCoordinates) {
+            LocationDto startLocationCoordinates) {
         // Parse coordinates
         double startLatitude = startLocationCoordinates.latitude();
         double startLongitude = startLocationCoordinates.longitude();
@@ -182,16 +353,25 @@ public class CardServiceImpl implements CardService {
         return (int) (EARTH_RADIUS_KM * c);
     }
 
+    private Card initializeUsersCard(CreateCardRequestDto requestDto, User author) {
+        Card newCard = cardMapper.toModel(requestDto);
+        newCard.setAuthor(author.getPseudonym());
+        LocationDto locationDto = mapsApiService.getMapsResponseByUsersUrl(newCard.getMapLink());
+        newCard.setMapLink(locationDto.mapLink());
+        newCard.setLatitude(locationDto.latitude());
+        newCard.setLongitude(locationDto.longitude());
+        return newCard;
+    }
+
     private static Map<String, List<String>> getLocationsToExcludeAndTypeMap(
             CardSearchParameters searchParams,
             List<Card> foundCards) {
-        // TODO: fix method implementation. Now it creates map with 1 empty key
         Map<String, List<String>> locationsToExcludeAndTypeMap = new HashMap<>();
         Arrays.stream(searchParams.tripTypes()).forEach(type -> {
             locationsToExcludeAndTypeMap.put(type, new ArrayList<>());
             foundCards.forEach(card -> {
                 if (card.getTripTypes().contains(type)) {
-                    locationsToExcludeAndTypeMap.get(type).add(card.getFullName());
+                    locationsToExcludeAndTypeMap.get(type).add(getExcludeLocationName(card));
                 }
             });
         });
@@ -210,8 +390,7 @@ public class CardServiceImpl implements CardService {
     }
 
     private static int getRequiredCardsAmount(Pageable pageable) {
-        int requiredAmount = pageable.getPageSize() * (pageable.getPageNumber() + 1);
-        return requiredAmount;
+        return pageable.getPageSize() * (pageable.getPageNumber() + 1);
     }
 
     private static boolean isAiCardsRequired(CardSearchParameters searchParams) {
@@ -238,8 +417,8 @@ public class CardServiceImpl implements CardService {
         return searchKey;
     }
 
-    private static boolean isValidLocation(MapsResponseDto mapsResponseDto) {
-        return mapsResponseDto.latitude() != 0
-                || mapsResponseDto.longitude() != 0;
+    private static boolean isValidLocation(LocationDto locationDto) {
+        return locationDto.latitude() != 0
+                || locationDto.longitude() != 0;
     }
 }

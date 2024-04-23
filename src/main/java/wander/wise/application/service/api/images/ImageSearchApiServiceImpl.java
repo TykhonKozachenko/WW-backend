@@ -18,7 +18,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import wander.wise.application.config.ApisConfigProperties;
-import wander.wise.application.exception.ImageSearchException;
+import wander.wise.application.exception.custom.ImageSearchException;
 
 @Service
 @RequiredArgsConstructor

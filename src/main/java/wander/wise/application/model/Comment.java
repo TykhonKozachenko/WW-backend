@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
-import wander.wise.application.model.report.CommentReport;
 
 @Entity
 @Table(name = "comments")
@@ -35,7 +34,6 @@ public class Comment {
     @Column(nullable = false)
     private String text;
     private Integer stars = 5;
-    @OneToMany(mappedBy = "comment")
-    private Set<CommentReport> reports;
+    private Long reports = 0L;
     private boolean shown = true;
 }

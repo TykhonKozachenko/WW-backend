@@ -1,9 +1,9 @@
 package wander.wise.application.service.api.maps;
 
-import wander.wise.application.dto.maps.MapsResponseDto;
+import wander.wise.application.dto.maps.LocationDto;
 
 public interface MapsApiService {
-    MapsResponseDto getMapsResponseByLocationName(String locationName);
+    LocationDto getMapsResponseByLocationName(String locationName);
 
-    MapsResponseDto getMapsResponseByUsersUrl(String usersUrl);
+    LocationDto getMapsResponseByUsersUrl(String usersUrl);
 }

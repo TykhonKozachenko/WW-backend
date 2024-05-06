@@ -22,7 +22,8 @@ public class AiApiServiceImpl implements AiApiService {
     private static final String CLIMATE_LIST = "Tropical|Polar|Temperate";
     private static final String FULL_NAME_EXAMPLES =
             "Examples: Central park|New York|New York state|USA|North America, "
-                    + "Blagoveshchensky cathedral|Kharkiv|Kharkiv Oblast|Ukraine|Europe)\",";
+                    + "Freedom Square|Kharkiv|Kharkiv Oblast|Ukraine|Europe, "
+                    + "Louvre|Paris|Île-de-France|France|Europe)\",";
     private static final String FULL_NAME_RULES = "(Double check this field. "
             + "Fill in each point. Use | between points. ";
     private static final String FULL_NAME_TEMPLATE = "\"location name|populated locality|"
@@ -31,9 +32,9 @@ public class AiApiServiceImpl implements AiApiService {
             + "location. Return information as "
             + "json object. Use this format: ";
     private static final String LOCATION_NAMES_FIELD_FORMAT = "\"locationNames\": "
-            + "[\"location name1|populated locality|region|country|continent\", "
-            + "\"location name 2|populated locality|region|country|continent\", "
-            + "\"location name 3|populated locality|region|country|continent\", ect.]";
+            + "[\"Location name1|Populated locality|Region|Country|Continent\", "
+            + "\"Location name 2|Populated locality|Region|Country|Continent\", "
+            + "\"Location name 3|Populated locality|Region|Country|Continent\", ect.]";
     private static final String NON_EXISTING_RESTRICT = "It is important that"
             + " the locations exist. "
             + "I will be in danger if travel to non-existing location.";
@@ -80,6 +81,42 @@ public class AiApiServiceImpl implements AiApiService {
                         .contains(searchParameters
                                 .travelDistance()[0]))
                 .toList();
+    }
+
+    @Override
+    public CardSearchParameters defineRegion(CardSearchParameters searchParameters) {
+        String paramsJson = null;
+        try {
+            paramsJson = MAPPER.writeValueAsString(searchParameters);
+            System.out.println(paramsJson);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Invalid search parameters.", e);
+        }
+        String defineRegionPrompt = getDefineRegionPrompt(searchParameters, paramsJson);
+        String response = chatClient.call(defineRegionPrompt);
+        try {
+            return MAPPER.readValue(response, CardSearchParameters.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Ai returned incorrect search parameters: " + response, e);
+        }
+    }
+
+    @Override
+    public CardSearchParameters defineContinent(CardSearchParameters searchParameters) {
+        String paramsJson = null;
+        try {
+            paramsJson = MAPPER.writeValueAsString(searchParameters);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Invalid search parameters.", e);
+        }
+        String detectDistancePrompt = getDefineContinentPrompt(searchParameters, paramsJson);
+        String response = chatClient.call(detectDistancePrompt);
+        try {
+            searchParameters = MAPPER.readValue(response, CardSearchParameters.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Ai returned incorrect search parameters: " + response, e);
+        }
+        return searchParameters;
     }
 
     /**
@@ -288,6 +325,11 @@ public class AiApiServiceImpl implements AiApiService {
                         + "check is each location really situated "
                         + "in this place. If not, fix the mistake.")
                 .append(SEPARATOR)
+                .append("3. Each location should match this format: ")
+                .append("Location name|Populated locality|Region|Country|Continent")
+                .append(SEPARATOR)
+                .append("Fix location name, if it doesn't match required pattern.")
+                .append(SEPARATOR)
                 .append("Return the result in the same json format.");
         return checkedLocations.toString();
     }
@@ -322,6 +364,35 @@ public class AiApiServiceImpl implements AiApiService {
                 .append(SEPARATOR)
                 .append("}");
         return locationDetailsPrompt.toString();
+    }
+
+    private static String getDefineRegionPrompt(CardSearchParameters searchParameters, String paramsJson) {
+        return new StringBuilder()
+                .append("I have this json object with search parameters: ")
+                .append(paramsJson)
+                .append(SEPARATOR)
+                .append("Find in which region of ")
+                .append(searchParameters.startLocation().split(",")[1])
+                .append(" the ")
+                .append(searchParameters.startLocation().split(",")[0])
+                .append(" is situated, set name of this region in travel distance ")
+                .append("field and return new object in the same format.")
+                .append(SEPARATOR)
+                .append("It is important to use local name of the region. ")
+                .append("Good examples: Île-de-France, Kharkiv oblast, New York state, ect.")
+                .toString();
+    }
+
+    private static String getDefineContinentPrompt(CardSearchParameters searchParameters, String paramsJson) {
+        return new StringBuilder()
+                .append("I have this json object with search parameters: ")
+                .append(paramsJson)
+                .append(SEPARATOR)
+                .append("Find on what continent is ")
+                .append(searchParameters.startLocation().split(",")[1])
+                .append(" located?, set name of this continent in travel distance ")
+                .append("field and return new object in the same format.")
+                .toString();
     }
 
     /**

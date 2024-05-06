@@ -222,6 +222,7 @@ public class CardServiceImpl implements CardService {
     public List<CardDto> search(
             Pageable pageable,
             CardSearchParameters searchParams) {
+        searchParams = resetTravelDistance(searchParams);
         Specification<Card> cardSpec = cardSpecificationBuilder.build(searchParams);
         List<Card> foundCards = findOrGenerateCards(
                 searchParams,
@@ -233,6 +234,21 @@ public class CardServiceImpl implements CardService {
         return initializeCardDtos(
                 foundCards,
                 startLocationCoordinates);
+    }
+
+    private CardSearchParameters resetTravelDistance(CardSearchParameters searchParameters) {
+        switch (searchParameters.travelDistance()[0]) {
+            case "Populated locality" ->
+                    searchParameters = searchParameters.setTravelDistance(searchParameters.startLocation().split(",")[0]);
+            case "Country" ->
+                    searchParameters = searchParameters.setTravelDistance(searchParameters.startLocation().split(",")[1]);
+            case "Region" ->
+                    searchParameters = aiApiService.defineRegion(searchParameters);
+            case "Continent" -> {
+                searchParameters = aiApiService.defineContinent(searchParameters);
+            }
+        }
+        return searchParameters;
     }
 
     private List<Card> findOrGenerateCards(
@@ -268,7 +284,7 @@ public class CardServiceImpl implements CardService {
     private List<Card> findCards(Specification<Card> cardSpec) {
         return cardRepository.findAll(cardSpec)
                 .stream()
-                .filter(card -> card.isShown() == true)
+                .filter(Card::isShown)
                 .toList();
     }
 
@@ -280,7 +296,11 @@ public class CardServiceImpl implements CardService {
                 locationsToExcludeAndTypeMap);
         List<Card> generatedCards = aiResponsesToCards(responseDtos);
         if (!generatedCards.isEmpty()) {
-            cardRepository.saveAll(generatedCards);
+            for (Card card : generatedCards) {
+                try {
+                    cardRepository.save(card);
+                } catch (Exception ignored) {}
+            }
         }
     }
 

@@ -9,4 +9,8 @@ public interface AiApiService {
     List<AiResponseDto> getAiResponses(
             CardSearchParameters searchParameters,
             Map<String, List<String>> locationsToExcludeAndTypeMap);
+
+    CardSearchParameters defineRegion(CardSearchParameters searchParameters);
+
+    CardSearchParameters defineContinent(CardSearchParameters searchParameters);
 }

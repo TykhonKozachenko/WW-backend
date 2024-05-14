@@ -1,6 +1,7 @@
 package wander.wise.application.service.comment;
 
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import wander.wise.application.dto.comment.CommentDto;
@@ -14,7 +15,6 @@ import wander.wise.application.repository.comment.CommentRepository;
 import wander.wise.application.repository.user.UserRepository;
 import wander.wise.application.service.api.email.EmailService;
 import wander.wise.application.service.user.UserService;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor

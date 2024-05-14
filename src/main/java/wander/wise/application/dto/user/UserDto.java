@@ -1,7 +1,5 @@
 package wander.wise.application.dto.user;
 
-import wander.wise.application.model.Role;
-
 import java.util.Set;
 
 public record UserDto(

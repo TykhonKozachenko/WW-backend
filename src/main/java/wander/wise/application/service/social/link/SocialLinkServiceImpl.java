@@ -27,7 +27,8 @@ public class SocialLinkServiceImpl implements SocialLinkService {
     }
 
     @Override
-    public SocialLinkDto updateSocialLinkById(Long id, String email, CreateSocialLinkRequestDto requestDto) {
+    public SocialLinkDto updateSocialLinkById(Long id, String email,
+                                              CreateSocialLinkRequestDto requestDto) {
         userService.findUserAndAuthorize(requestDto.userId(), email);
         SocialLink updatedSocialLink = socialLinkRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(

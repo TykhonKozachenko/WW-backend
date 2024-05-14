@@ -1,4 +1,4 @@
 package wander.wise.application.dto.social.link;
 
-public record SocialLinkDto(String name, String link) {
+public record SocialLinkDto(Long id, String name, String link) {
 }

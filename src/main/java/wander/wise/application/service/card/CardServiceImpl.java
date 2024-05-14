@@ -1,20 +1,24 @@
 package wander.wise.application.service.card;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import wander.wise.application.dto.ai.AiResponseDto;
-import wander.wise.application.dto.card.*;
+import wander.wise.application.dto.card.CardDto;
+import wander.wise.application.dto.card.CardSearchParameters;
+import wander.wise.application.dto.card.CreateCardRequestDto;
+import wander.wise.application.dto.card.ReportCardRequestDto;
+import wander.wise.application.dto.card.SearchCardsResponseDto;
 import wander.wise.application.dto.maps.LocationDto;
 import wander.wise.application.exception.custom.AuthorizationException;
 import wander.wise.application.exception.custom.CardSearchException;
@@ -30,6 +34,7 @@ import wander.wise.application.service.api.ai.AiApiService;
 import wander.wise.application.service.api.email.EmailService;
 import wander.wise.application.service.api.images.ImageSearchApiService;
 import wander.wise.application.service.api.maps.MapsApiService;
+import wander.wise.application.service.api.storage.StorageService;
 
 @Service
 @RequiredArgsConstructor
@@ -46,9 +51,10 @@ public class CardServiceImpl implements CardService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final CollectionRepository collectionRepository;
+    private final StorageService storageService;
 
     @Override
-    public CardWithoutDistanceDto createNewCard(String email, CreateCardRequestDto requestDto) {
+    public CardDto createNewCard(String email, CreateCardRequestDto requestDto) {
         User author = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find user by email: " + email));
@@ -61,14 +67,14 @@ public class CardServiceImpl implements CardService {
                     .get();
             updatedSavedCards.getCards().add(savedCard);
             collectionRepository.save(updatedSavedCards);
-            return cardMapper.toCardWithoutDistanceDto(savedCard);
+            return cardMapper.toDto(savedCard);
         } else {
             throw new AuthorizationException("Access denied. User is banned.");
         }
     }
 
     @Override
-    public CardWithoutDistanceDto updateById(Long id, String email, CreateCardRequestDto requestDto) {
+    public CardDto updateById(Long id, String email, CreateCardRequestDto requestDto) {
         Card updatedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
@@ -80,28 +86,64 @@ public class CardServiceImpl implements CardService {
                 .equals(updatingUser.getPseudonym())
                 && !updatingUser.isBanned())) {
             updatedCard = cardMapper.updateCardFromRequestDto(updatedCard, requestDto);
-            return cardMapper.toCardWithoutDistanceDto(cardRepository.save(updatedCard));
+            if (updatedCard.getImageLinks().length() > 0) {
+                Arrays.stream(updatedCard.getImageLinks().split("\\|"))
+                        .filter(link -> !Arrays.stream(requestDto
+                                .imageLinks()).toList().contains(link))
+                        .forEach(link -> storageService.deleteFile(link
+                                .substring(link.lastIndexOf("/") + 1)));
+            }
+            updatedCard.setImageLinks(String.join("|", requestDto.imageLinks()));
+            return cardMapper.toDto(cardRepository.save(updatedCard));
         } else {
             throw new AuthorizationException("Access denied.");
         }
     }
 
     @Override
-    public CardWithoutDistanceDto findById(Long id) {
-        return cardMapper.toCardWithoutDistanceDto(cardRepository.findById(id)
+    public CardDto addImagesToCardById(Long id, String email, List<MultipartFile> images) {
+        Card updatedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        User updatingUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find user by email: " + email));
+        if (updatingUser.getAuthorities().size() > 1
+                || (updatedCard.getAuthor()
+                .equals(updatingUser.getPseudonym())
+                && !updatingUser.isBanned())) {
+            String imageLinks = String.join("|", images.stream()
+                    .map(storageService::uploadFile)
+                    .toList());
+            String existingLinks = updatedCard.getImageLinks();
+            if (!existingLinks.isEmpty()) {
+                existingLinks = existingLinks + "|" + imageLinks;
+            } else {
+                existingLinks = imageLinks;
+            }
+            updatedCard.setImageLinks(existingLinks);
+            return cardMapper.toDto(cardRepository.save(updatedCard));
+        } else {
+            throw new AuthorizationException("Access denied.");
+        }
+    }
+
+    @Override
+    public CardDto findById(Long id) {
+        return cardMapper.toDto(cardRepository.findById(id)
                 .filter(Card::isShown).orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id)));
     }
 
     @Override
-    public CardWithoutDistanceDto findByIdAsAdmin(Long id) {
-        return cardMapper.toCardWithoutDistanceDto(cardRepository.findById(id)
+    public CardDto findByIdAsAdmin(Long id) {
+        return cardMapper.toDto(cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id)));
     }
 
     @Override
-    public void addCardToSaved(Long id, String email) {
+    public boolean addCardToSaved(Long id, String email) {
         Card addedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
@@ -110,12 +152,18 @@ public class CardServiceImpl implements CardService {
                 .filter(collection -> collection.getName().equals("Saved cards"))
                 .findFirst()
                 .get();
-        updatedSavedCards.getCards().add(addedCard);
-        collectionRepository.save(updatedSavedCards);
+        List<Long> savedCardsIds = updatedSavedCards.getCards().stream().map(Card::getId).toList();
+        if (!savedCardsIds.contains(id)) {
+            updatedSavedCards.getCards().add(addedCard);
+            collectionRepository.save(updatedSavedCards);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public void removeCardFromSaved(Long id, String email) {
+    public boolean removeCardFromSaved(Long id, String email) {
         Card removedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
@@ -124,28 +172,39 @@ public class CardServiceImpl implements CardService {
                 .filter(collection -> collection.getName().equals("Saved cards"))
                 .findFirst()
                 .get();
-        updatedSavedCards.getCards().remove(removedCard);
-        collectionRepository.save(updatedSavedCards);
+        List<Long> savedCardsIds = updatedSavedCards.getCards().stream().map(Card::getId).toList();
+        if (savedCardsIds.contains(id)) {
+            updatedSavedCards.getCards().remove(removedCard);
+            collectionRepository.save(updatedSavedCards);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public void postLike(Long id, String email) {
-        Card likedCard = cardRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find card by id: " + id));
-        likedCard.setLikes(likedCard.getLikes() + 1);
-        cardRepository.save(likedCard);
+    public boolean postLike(Long id, String email) {
         Collection updatedLikedCards = collectionRepository.findAllByUserEmail(email)
                 .stream()
                 .filter(collection -> collection.getName().equals("Liked cards"))
                 .findFirst()
                 .get();
-        updatedLikedCards.getCards().add(likedCard);
-        collectionRepository.save(updatedLikedCards);
+        Card likedCard = cardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find card by id: " + id));
+        if (!updatedLikedCards.getCards().contains(likedCard)) {
+            likedCard.setLikes(likedCard.getLikes() + 1);
+            Card savedCard = cardRepository.save(likedCard);
+            updatedLikedCards.getCards().add(likedCard);
+            collectionRepository.save(updatedLikedCards);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public void removeLike(Long id, String email) {
+    public boolean removeLike(Long id, String email) {
         Card likedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
@@ -154,28 +213,43 @@ public class CardServiceImpl implements CardService {
                 .filter(collection -> collection.getName().equals("Liked cards"))
                 .findFirst()
                 .get();
-        updatedLikedCards.getCards().remove(likedCard);
-        collectionRepository.save(updatedLikedCards);
-        likedCard.setLikes(likedCard.getLikes() - 1);
-        cardRepository.save(likedCard);
+        if (updatedLikedCards.getCards().contains(likedCard)) {
+            updatedLikedCards.getCards().remove(likedCard);
+            collectionRepository.save(updatedLikedCards);
+            likedCard.setLikes(likedCard.getLikes() - 1);
+            cardRepository.save(likedCard);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public void hideCard(Long id) {
+    public boolean hideCard(Long id) {
         Card hiddenCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
-        hiddenCard.setShown(false);
-        cardRepository.save(hiddenCard);
+        if (hiddenCard.isShown()) {
+            hiddenCard.setShown(false);
+            cardRepository.save(hiddenCard);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public void revealCard(Long id) {
+    public boolean revealCard(Long id) {
         Card revealedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
-        revealedCard.setShown(true);
-        cardRepository.save(revealedCard);
+        if (!revealedCard.isShown()) {
+            revealedCard.setShown(true);
+            cardRepository.save(revealedCard);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
@@ -204,7 +278,7 @@ public class CardServiceImpl implements CardService {
         String message = new StringBuilder()
                 .append("User email: ").append(email)
                 .append(System.lineSeparator())
-                .append("Card link: ").append(requestDto.cardLink())
+                .append("Card id: ").append(id)
                 .append(System.lineSeparator())
                 .append("Report text: ").append(requestDto.text())
                 .append(System.lineSeparator())
@@ -219,7 +293,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
-    public List<CardDto> search(
+    public SearchCardsResponseDto search(
             Pageable pageable,
             CardSearchParameters searchParams) {
         searchParams = resetTravelDistance(searchParams);
@@ -231,22 +305,30 @@ public class CardServiceImpl implements CardService {
                 INITIAL_ATTEMPTS);
         LocationDto startLocationCoordinates = mapsApiService
                 .getMapsResponseByLocationName(searchParams.startLocation());
-        return initializeCardDtos(
-                foundCards,
-                startLocationCoordinates);
+
+        return new SearchCardsResponseDto(
+                pageable.getPageNumber(),
+                initializeCardDtos(
+                        foundCards,
+                        startLocationCoordinates));
     }
 
     private CardSearchParameters resetTravelDistance(CardSearchParameters searchParameters) {
         switch (searchParameters.travelDistance()[0]) {
             case "Populated locality" ->
-                    searchParameters = searchParameters.setTravelDistance(searchParameters.startLocation().split(",")[0]);
+                    searchParameters = searchParameters
+                            .setTravelDistance(searchParameters.startLocation()
+                                    .split(",")[0]);
             case "Country" ->
-                    searchParameters = searchParameters.setTravelDistance(searchParameters.startLocation().split(",")[1]);
+                    searchParameters = searchParameters
+                            .setTravelDistance(searchParameters.startLocation()
+                                    .split(",")[1]);
             case "Region" ->
                     searchParameters = aiApiService.defineRegion(searchParameters);
-            case "Continent" -> {
-                searchParameters = aiApiService.defineContinent(searchParameters);
-            }
+            case "Continent" ->
+                    searchParameters = aiApiService.defineContinent(searchParameters);
+            default ->
+                    searchParameters = searchParameters.setTravelDistance("");
         }
         return searchParameters;
     }
@@ -299,7 +381,9 @@ public class CardServiceImpl implements CardService {
             for (Card card : generatedCards) {
                 try {
                     cardRepository.save(card);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    System.out.println("Duplicate entity");
+                }
             }
         }
     }

@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -25,7 +24,8 @@ public interface CommentMapper {
     @Mapping(target = "card", source = "cardId", qualifiedByName = "cardIdToCard")
     Comment toModel(CreateCommentRequestDto requestDto);
 
-    Comment updateCommentFromDto(@MappingTarget Comment comment, CreateCommentRequestDto requestDto);
+    Comment updateCommentFromDto(@MappingTarget Comment comment,
+                                 CreateCommentRequestDto requestDto);
 
     @Named("toCommentDtoSet")
     default Set<CommentDto> toCommentDtoList(Set<Comment> comments) {

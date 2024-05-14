@@ -1,14 +1,19 @@
 package wander.wise.application.service.user;
 
+import java.util.Set;
+import org.springframework.web.multipart.MultipartFile;
 import wander.wise.application.dto.collection.CollectionWithoutCardsDto;
+import wander.wise.application.dto.comment.CommentDto;
 import wander.wise.application.dto.social.link.SocialLinkDto;
 import wander.wise.application.dto.user.UserDto;
 import wander.wise.application.dto.user.login.LoginResponseDto;
 import wander.wise.application.dto.user.registration.RegisterUserRequestDto;
-import wander.wise.application.dto.user.update.*;
-import wander.wise.application.model.Collection;
+import wander.wise.application.dto.user.update.RestorePasswordRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserEmailRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserInfoRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserPasswordRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserRolesRequestDto;
 import wander.wise.application.model.User;
-import java.util.Set;
 
 public interface UserService {
     UserDto save(RegisterUserRequestDto requestDto);
@@ -17,15 +22,16 @@ public interface UserService {
 
     UserDto updateUserInfo(Long id, String email, UpdateUserInfoRequestDto requestDto);
 
+    UserDto updateUserImage(Long id, String email, MultipartFile userImage);
+
     UserDto updateUserRoles(Long id, UpdateUserRolesRequestDto requestDto);
 
     UserDto requestUpdateUserEmail(Long id, String email, UpdateUserEmailRequestDto requestDto);
 
     LoginResponseDto updateUserEmail(Long id, String email, UpdateUserEmailRequestDto requestDto);
 
-    UserDto requestUpdateUserPassword(Long id, String email);
-
-    LoginResponseDto updateUserPassword(Long id, String email, UpdateUserPasswordRequestDto requestDto);
+    LoginResponseDto updateUserPassword(Long id, String email,
+                                        UpdateUserPasswordRequestDto requestDto);
 
     UserDto banUser(Long id);
 
@@ -39,7 +45,10 @@ public interface UserService {
 
     Set<CollectionWithoutCardsDto> getUserCollections(Long id, String email);
 
+    Set<CommentDto> getUserComments(Long id, String email);
+
     void restorePassword(RestorePasswordRequestDto requestDto);
 
     User findUserAndAuthorize(Long id, String email);
+
 }

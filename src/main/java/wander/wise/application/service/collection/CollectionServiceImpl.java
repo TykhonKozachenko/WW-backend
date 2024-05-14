@@ -1,6 +1,7 @@
 package wander.wise.application.service.collection;
 
 import jakarta.persistence.EntityNotFoundException;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import wander.wise.application.dto.collection.CollectionDto;
@@ -13,8 +14,6 @@ import wander.wise.application.model.Collection;
 import wander.wise.application.model.User;
 import wander.wise.application.repository.collection.CollectionRepository;
 import wander.wise.application.service.user.UserService;
-
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

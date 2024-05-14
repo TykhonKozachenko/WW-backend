@@ -7,7 +7,7 @@ import wander.wise.application.validation.password.PasswordMatch;
 
 @PasswordMatch
 public record RegisterUserRequestDto(
-        @Email String email,
+        @NotBlank @Email String email,
         @NotBlank @Size(min = 8) String password,
         @NotBlank @Size(min = 8) String repeatPassword) {
 }

@@ -1,5 +1,6 @@
 package wander.wise.application.service.api.storage;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import java.io.File;
@@ -9,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import wander.wise.application.exception.custom.StorageException;
+import wander.wise.application.exception.custom.StorageServiceException;
 
 @Service
 public class StorageServiceImpl implements StorageService {
@@ -28,8 +29,8 @@ public class StorageServiceImpl implements StorageService {
             s3Client.putObject(new PutObjectRequest(bucketName, filename, fileObj));
             fileObj.delete();
             return BASE_URL + filename;
-        } catch (Exception e) {
-            throw new StorageException(
+        } catch (SdkClientException e) {
+            throw new StorageServiceException(
                     "An error occurred when saving file to the cloud storage", e);
         }
     }
@@ -39,8 +40,8 @@ public class StorageServiceImpl implements StorageService {
         try {
             s3Client.deleteObject(bucketName, fileName);
             return fileName + " removed";
-        } catch (Exception e) {
-            throw new StorageException(
+        } catch (SdkClientException e) {
+            throw new StorageServiceException(
                     "An error occurred when deleting file from the cloud storage", e);
         }
     }
@@ -50,7 +51,7 @@ public class StorageServiceImpl implements StorageService {
         try (FileOutputStream fos = new FileOutputStream(convertedFile)) {
             fos.write(file.getBytes());
         } catch (IOException e) {
-            throw new StorageException("Error converting multipartFile to file", e);
+            throw new StorageServiceException("Error converting multipartFile to file", e);
         }
         return convertedFile;
     }

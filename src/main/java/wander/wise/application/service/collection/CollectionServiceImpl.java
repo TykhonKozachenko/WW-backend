@@ -4,7 +4,10 @@ import jakarta.persistence.EntityNotFoundException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import wander.wise.application.constants.GlobalConstants;
 import wander.wise.application.dto.collection.CollectionDto;
+import wander.wise.application.dto.collection.CollectionWithoutCardsDto;
 import wander.wise.application.dto.collection.CreateCollectionRequestDto;
 import wander.wise.application.dto.collection.UpdateCollectionRequestDto;
 import wander.wise.application.exception.custom.AuthorizationException;
@@ -15,6 +18,8 @@ import wander.wise.application.model.User;
 import wander.wise.application.repository.collection.CollectionRepository;
 import wander.wise.application.service.user.UserService;
 
+import static wander.wise.application.constants.GlobalConstants.DIVIDER;
+
 @Service
 @RequiredArgsConstructor
 public class CollectionServiceImpl implements CollectionService {
@@ -23,19 +28,12 @@ public class CollectionServiceImpl implements CollectionService {
     private final UserService userService;
 
     @Override
-    public CollectionDto save(String email, CreateCollectionRequestDto requestDto) {
+    @Transactional
+    public CollectionWithoutCardsDto save(String email, CreateCollectionRequestDto requestDto) {
         User updatedUser = userService.findUserAndAuthorize(requestDto.userId(), email);
         Collection savedCollection = collectionMapper.toModel(requestDto);
         savedCollection.setUser(updatedUser);
-        savedCollection = collectionRepository.save(savedCollection);
-        savedCollection = collectionRepository.findById(savedCollection.getId()).get();
-        savedCollection.setName(savedCollection.getCards()
-                .stream()
-                .limit(3)
-                .map(Card::getFullName)
-                .map(name -> name.split("\\|")[0])
-                .collect(Collectors.joining(",")) + "...");
-        return collectionMapper.toDto(collectionRepository.save(savedCollection));
+        return collectionMapper.toCollectionWithoutCardsDto(collectionRepository.save(savedCollection));
     }
 
     @Override
@@ -52,6 +50,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Override
+    @Transactional
     public CollectionDto updateById(Long id, String email, UpdateCollectionRequestDto requestDto) {
         Collection collection = collectionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -70,6 +69,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id, String email) {
         Collection collection = collectionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(

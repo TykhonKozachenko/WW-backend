@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import wander.wise.application.dto.collection.CollectionDto;
+import wander.wise.application.dto.collection.CollectionWithoutCardsDto;
 import wander.wise.application.dto.collection.CreateCollectionRequestDto;
 import wander.wise.application.dto.collection.UpdateCollectionRequestDto;
 import wander.wise.application.service.collection.CollectionService;
@@ -40,8 +41,8 @@ public class CollectionController {
     @PostMapping
     @PreAuthorize("hasAuthority('USER')")
     @Operation(summary = SAVE_COLLECTION_SUM, description = SAVE_COLLECTION_DESC)
-    public CollectionDto save(Authentication authentication,
-                              @Valid @RequestBody CreateCollectionRequestDto requestDto) {
+    public CollectionWithoutCardsDto save(Authentication authentication,
+                                          @Valid @RequestBody CreateCollectionRequestDto requestDto) {
         return collectionService.save(authentication.getName(), requestDto);
     }
 

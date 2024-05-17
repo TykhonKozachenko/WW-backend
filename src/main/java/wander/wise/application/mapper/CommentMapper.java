@@ -44,7 +44,7 @@ public interface CommentMapper {
 
     @Named("timeStampToString")
     default String timeStampToString(LocalDateTime timeStamp) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
         return timeStamp.format(formatter);
     }
 

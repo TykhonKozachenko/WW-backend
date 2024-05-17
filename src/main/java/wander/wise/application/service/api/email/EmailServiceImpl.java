@@ -1,6 +1,7 @@
 package wander.wise.application.service.api.email;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class EmailServiceImpl implements EmailService {
         message.setSubject(subject);
         try {
             javaMailSender.send(message);
-        } catch (Exception e) {
+        } catch (MailException e) {
             throw new EmailServiceException("Can't send message: " + message, e);
         }
     }

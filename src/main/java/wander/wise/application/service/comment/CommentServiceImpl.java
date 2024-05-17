@@ -4,6 +4,8 @@ import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import wander.wise.application.constants.GlobalConstants;
 import wander.wise.application.dto.comment.CommentDto;
 import wander.wise.application.dto.comment.CreateCommentRequestDto;
 import wander.wise.application.dto.comment.ReportCommentRequestDto;
@@ -16,6 +18,8 @@ import wander.wise.application.repository.user.UserRepository;
 import wander.wise.application.service.api.email.EmailService;
 import wander.wise.application.service.user.UserService;
 
+import static wander.wise.application.constants.GlobalConstants.SEPARATOR;
+
 @Service
 @RequiredArgsConstructor
 public class CommentServiceImpl implements CommentService {
@@ -26,10 +30,9 @@ public class CommentServiceImpl implements CommentService {
     private final UserService userService;
 
     @Override
+    @Transactional
     public CommentDto save(String email, CreateCommentRequestDto requestDto) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + email));
+        User user = userService.findUserEntityByEmail(email);
         if (!user.isBanned()) {
             Comment newComment = commentMapper.toModel(requestDto);
             newComment.setTimeStamp(LocalDateTime.now());
@@ -41,6 +44,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public CommentDto update(Long id, String email, CreateCommentRequestDto requestDto) {
         Comment updatedComment = commentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -51,6 +55,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public void report(Long id, String email, ReportCommentRequestDto requestDto) {
         Comment reportedComment = commentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -58,13 +63,13 @@ public class CommentServiceImpl implements CommentService {
         reportedComment.setReports(reportedComment.getReports() + 1);
         String message = new StringBuilder()
                 .append("User email: ").append(email)
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Comment author: ").append(requestDto.commentAuthor())
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Comment text: ").append(requestDto.commentText())
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Report text: ").append(requestDto.reportText())
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Comment was reported: ")
                 .append(reportedComment.getReports()).append(" times")
                 .toString();
@@ -76,13 +81,12 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id, String email) {
         Comment deletedComment = commentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find comment by id: " + id));
-        User deletingUser = userRepository.findById(deletedComment.getUser().getId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by id: " + id));
+        User deletingUser = userService.findUserEntityById(id);
         if (deletingUser.getAuthorities().size() > 1
                 || deletingUser.getEmail().equals(email)) {
             userService.findUserAndAuthorize(deletedComment.getUser().getId(), email);

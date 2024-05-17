@@ -51,4 +51,7 @@ public interface UserService {
 
     User findUserAndAuthorize(Long id, String email);
 
+    User findUserEntityById(Long id);
+
+    User findUserEntityByEmail(String email);
 }

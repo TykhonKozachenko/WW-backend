@@ -18,7 +18,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import wander.wise.application.config.ApisConfigProperties;
-import wander.wise.application.exception.custom.ImageSearchException;
+import wander.wise.application.exception.custom.ImageSearchServiceException;
 
 @Service
 @RequiredArgsConstructor
@@ -86,7 +86,7 @@ public class ImageSearchApiServiceImpl implements ImageSearchApiService {
             }
             stream.close();
         } catch (IOException e) {
-            throw new ImageSearchException("Exception occurred when try "
+            throw new ImageSearchServiceException("Exception occurred when try "
                     + "to get inputStream from connection: "
                     + connection, e);
         }
@@ -101,7 +101,7 @@ public class ImageSearchApiServiceImpl implements ImageSearchApiService {
         try {
             url = new URL(HOST + PATH + queryParams);
         } catch (MalformedURLException e) {
-            throw new ImageSearchException(
+            throw new ImageSearchServiceException(
                     "Invalid host: " + HOST
                             + "\nor path: " + PATH
                             + "\nor queryParams: " + queryParams, e);
@@ -109,7 +109,7 @@ public class ImageSearchApiServiceImpl implements ImageSearchApiService {
         try {
             connection = (HttpURLConnection) url.openConnection();
         } catch (IOException e) {
-            throw new ImageSearchException("Exception occurred when try "
+            throw new ImageSearchServiceException("Exception occurred when try "
                     + "to open connection with url: "
                     + url, e);
         }

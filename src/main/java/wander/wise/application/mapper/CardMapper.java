@@ -14,6 +14,8 @@ import wander.wise.application.dto.card.CardDto;
 import wander.wise.application.dto.card.CreateCardRequestDto;
 import wander.wise.application.model.Card;
 
+import static wander.wise.application.constants.GlobalConstants.DIVIDER;
+
 @Mapper(config = MapperConfig.class, uses = {CommentMapper.class})
 public interface CardMapper {
     Card aiResponseToCard(AiResponseDto aiResponseDto);
@@ -69,24 +71,20 @@ public interface CardMapper {
 
     @Named("stringToSet")
     default Set<String> stringToSet(String field) {
-        return Arrays.stream(field.split("\\|"))
+        return Arrays.stream(field.split(DIVIDER))
                 .collect(Collectors.toSet());
     }
 
     @Named("fullNameToName")
     default String fullNameToName(String fullName) {
-        return fullName.split("\\|")[0];
+        return fullName.split(DIVIDER)[0];
     }
 
     @Named("fullNameToWhereIs")
     default String fullNameToWhereIs(String fullName) {
-        String[] fullNameArray = fullName.split("\\|");
-        return Arrays.toString(Arrays.copyOfRange(
-                fullNameArray,
-                1,
-                fullNameArray.length))
-                .replace("[", "")
-                .replace("]", "");
+        String[] whereIsArray = fullName.split(DIVIDER);
+        whereIsArray = Arrays.copyOfRange(whereIsArray, 1, whereIsArray.length);
+        return String.join(", ", whereIsArray);
     }
 
     @Named("cardsToCardDtos")

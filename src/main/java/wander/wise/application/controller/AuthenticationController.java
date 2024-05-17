@@ -4,6 +4,8 @@ import static wander.wise.application.constants.SwaggerConstants.CONFIRM_EMAIL_D
 import static wander.wise.application.constants.SwaggerConstants.CONFIRM_EMAIL_SUM;
 import static wander.wise.application.constants.SwaggerConstants.LOGIN_DESC;
 import static wander.wise.application.constants.SwaggerConstants.LOGIN_SUM;
+import static wander.wise.application.constants.SwaggerConstants.LOGOUT_DESC;
+import static wander.wise.application.constants.SwaggerConstants.LOGOUT_SUM;
 import static wander.wise.application.constants.SwaggerConstants.REFRESH_JWT_DESC;
 import static wander.wise.application.constants.SwaggerConstants.REFRESH_JWT_SUM;
 import static wander.wise.application.constants.SwaggerConstants.REGISTER_NEW_USER_DESC;
@@ -17,8 +19,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -74,4 +78,13 @@ public class AuthenticationController {
                         + requestDto.email(),
                 HttpStatus.OK);
     }
+
+    @GetMapping("logout/{token}")
+    @PreAuthorize("hasAuthority('USER')")
+    @Operation(summary = LOGOUT_SUM, description = LOGOUT_DESC)
+    public ResponseEntity<String> logout(@PathVariable String token, Authentication authentication) {
+        authenticationService.logout(token, authentication.getName());
+        return new ResponseEntity<>("Success logout.", HttpStatus.OK);
+    }
+
 }

@@ -6,28 +6,29 @@ import static wander.wise.application.constants.AiApiServiceConstants.FULL_NAME_
 import static wander.wise.application.constants.AiApiServiceConstants.FULL_NAME_TEMPLATE;
 import static wander.wise.application.constants.AiApiServiceConstants.LIST_FORMATING_RULES;
 import static wander.wise.application.constants.AiApiServiceConstants.LOCATION_NAMES_FIELD_FORMAT;
-import static wander.wise.application.constants.AiApiServiceConstants.MAPPER;
 import static wander.wise.application.constants.AiApiServiceConstants.NON_EXISTING_RESTRICT;
-import static wander.wise.application.constants.AiApiServiceConstants.SEPARATOR;
 import static wander.wise.application.constants.AiApiServiceConstants.SPECIAL_REQUIREMENTS_LIST;
 import static wander.wise.application.constants.AiApiServiceConstants.SPECIFIC_LOCATION_EXAMPLES;
 import static wander.wise.application.constants.AiApiServiceConstants.TOTAL_REQUIRED_RESPONSES_AMOUNT;
 import static wander.wise.application.constants.AiApiServiceConstants.TRIP_TYPES_LIST;
+import static wander.wise.application.constants.GlobalConstants.JSON_MAPPER;
+import static wander.wise.application.constants.GlobalConstants.SEPARATOR;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.ChatClient;
 import org.springframework.stereotype.Service;
 import wander.wise.application.dto.ai.AiResponseDto;
 import wander.wise.application.dto.ai.LocationListDto;
 import wander.wise.application.dto.card.CardSearchParameters;
-import wander.wise.application.exception.custom.AiException;
+import wander.wise.application.exception.custom.AiServiceException;
 
 @Service
 @RequiredArgsConstructor
@@ -69,38 +70,18 @@ public class AiApiServiceImpl implements AiApiService {
 
     @Override
     public CardSearchParameters defineRegion(CardSearchParameters searchParameters) {
-        String paramsJson = null;
-        try {
-            paramsJson = MAPPER.writeValueAsString(searchParameters);
-            System.out.println(paramsJson);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Invalid search parameters.", e);
-        }
+        String paramsJson = objectToJson(searchParameters);
         String defineRegionPrompt = getDefineRegionPrompt(searchParameters, paramsJson);
         String response = chatClient.call(defineRegionPrompt);
-        try {
-            return MAPPER.readValue(response, CardSearchParameters.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Ai returned incorrect search parameters: " + response, e);
-        }
+        return (CardSearchParameters) jsonToObject(response, CardSearchParameters.class);
     }
 
     @Override
     public CardSearchParameters defineContinent(CardSearchParameters searchParameters) {
-        String paramsJson = null;
-        try {
-            paramsJson = MAPPER.writeValueAsString(searchParameters);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Invalid search parameters.", e);
-        }
+        String paramsJson = objectToJson(searchParameters);
         String detectDistancePrompt = getDefineContinentPrompt(searchParameters, paramsJson);
         String response = chatClient.call(detectDistancePrompt);
-        try {
-            searchParameters = MAPPER.readValue(response, CardSearchParameters.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Ai returned incorrect search parameters: " + response, e);
-        }
-        return searchParameters;
+        return (CardSearchParameters) jsonToObject(response, CardSearchParameters.class);
     }
 
     /**
@@ -179,13 +160,7 @@ public class AiApiServiceImpl implements AiApiService {
                 locationList,
                 totalLocationsToExclude);
         locationList = check(locationList);
-        try {
-            locationListDto = MAPPER.readValue(locationList, LocationListDto.class);
-        } catch (JsonProcessingException e) {
-            throw new AiException("Ai returned invalid location list: "
-                    + locationList, e);
-        }
-        return locationListDto;
+        return (LocationListDto) jsonToObject(locationList, LocationListDto.class);
     }
 
     private String removeDuplicates(String locationList, String totalLocationsToExclude) {
@@ -205,12 +180,7 @@ public class AiApiServiceImpl implements AiApiService {
     private AiResponseDto generateLocationDetails(String name) {
         String locationDetailsPrompt = getLocationDetailsPrompt(name);
         String locationDetails = chatClient.call(locationDetailsPrompt);
-        try {
-            return MAPPER.readValue(locationDetails, AiResponseDto.class);
-        } catch (JsonProcessingException e) {
-            throw new AiException("Ai returned invalid location details: "
-                    + locationDetails, e);
-        }
+        return (AiResponseDto) jsonToObject(locationDetails, AiResponseDto.class);
     }
 
     /**
@@ -401,5 +371,41 @@ public class AiApiServiceImpl implements AiApiService {
             Map<String, List<String>> locationsToExcludeAndTypeMap,
             String tripType) {
         return locationsToExcludeAndTypeMap.get(tripType).toString();
+    }
+
+    private static String objectToJson(Object object) {
+        String paramsJson = null;
+        try {
+            paramsJson = JSON_MAPPER.writeValueAsString(object);
+        } catch (IOException e) {
+            String className = getClassName(object.getClass());
+            throw new AiServiceException(
+                    "Can't convert "
+                            + className
+                            + " to JSON",
+                    e);
+        }
+        return paramsJson;
+    }
+
+    private static Object jsonToObject(String json, Class clazz) {
+        try {
+            return JSON_MAPPER.readValue(json, clazz);
+        } catch (IOException e) {
+            String className = getClassName(clazz);
+            throw new AiServiceException(
+                    "Ai returned incorrect json: "
+                            + json
+                            + SEPARATOR
+                            + "Cant convert it to "
+                            + className,
+                    e);
+        }
+    }
+
+    private static String getClassName(Class clazz) {
+        String className = clazz.getName();
+        className = className.substring(className.lastIndexOf(".") + 1);
+        return className;
     }
 }

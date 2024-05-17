@@ -66,7 +66,6 @@ public class SecurityConfig {
                                 .anyRequest()
                                 .authenticated()
                 )
-                .httpBasic(withDefaults())
                 .addFilterBefore(corsFilter(), CorsFilter.class)
                 .addFilterBefore(
                         jwtAuthenticationFilter,

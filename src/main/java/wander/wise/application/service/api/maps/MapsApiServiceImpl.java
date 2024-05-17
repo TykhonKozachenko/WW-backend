@@ -2,7 +2,6 @@ package wander.wise.application.service.api.maps;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -16,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import wander.wise.application.config.ApisConfigProperties;
 import wander.wise.application.dto.maps.LocationDto;
-import wander.wise.application.exception.custom.MapsException;
+import wander.wise.application.exception.custom.MapsServiceException;
+
+import static wander.wise.application.constants.GlobalConstants.JSON_MAPPER;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +43,7 @@ public class MapsApiServiceImpl implements MapsApiService {
         try {
             longUrl = getRedirectUrl(usersUrl);
         } catch (IOException e) {
-            throw new MapsException("Can't parse long url from the short one: "
+            throw new MapsServiceException("Can't parse long url from the short one: "
                     + usersUrl, e);
         }
         if (longUrl.contains("@")) {
@@ -86,7 +87,7 @@ public class MapsApiServiceImpl implements MapsApiService {
                 return https.getURL().toString();
             }
         } catch (IOException e) {
-            throw new MapsException("Something went wrong when parsing long url", e);
+            throw new MapsServiceException("Something went wrong when parsing long url", e);
         } finally {
             if (inputStream != null) {
                 inputStream.close();
@@ -114,12 +115,11 @@ public class MapsApiServiceImpl implements MapsApiService {
     }
 
     private static JsonNode convertMapsResponseToJson(ResponseEntity<String> response) {
-        ObjectMapper mapper = new ObjectMapper();
         JsonNode mapsResponseJson;
         try {
-            mapsResponseJson = mapper.readTree(response.getBody());
+            mapsResponseJson = JSON_MAPPER.readTree(response.getBody());
         } catch (JsonProcessingException e) {
-            throw new MapsException("Exception occurred when trying to map response to json: "
+            throw new MapsServiceException("Exception occurred when trying to map response to json: "
                     + response, e);
         }
         return mapsResponseJson;

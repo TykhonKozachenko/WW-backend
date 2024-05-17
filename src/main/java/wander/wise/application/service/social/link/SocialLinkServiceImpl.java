@@ -3,6 +3,7 @@ package wander.wise.application.service.social.link;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import wander.wise.application.dto.social.link.CreateSocialLinkRequestDto;
 import wander.wise.application.dto.social.link.SocialLinkDto;
 import wander.wise.application.mapper.SocialLinkMapper;
@@ -19,6 +20,7 @@ public class SocialLinkServiceImpl implements SocialLinkService {
     private final UserService userService;
 
     @Override
+    @Transactional
     public SocialLinkDto save(String email, CreateSocialLinkRequestDto requestDto) {
         User updatedUser = userService.findUserAndAuthorize(requestDto.userId(), email);
         SocialLink newSocialLink = socialLinkMapper.toModel(requestDto);
@@ -27,6 +29,7 @@ public class SocialLinkServiceImpl implements SocialLinkService {
     }
 
     @Override
+    @Transactional
     public SocialLinkDto updateSocialLinkById(Long id, String email,
                                               CreateSocialLinkRequestDto requestDto) {
         userService.findUserAndAuthorize(requestDto.userId(), email);
@@ -38,6 +41,7 @@ public class SocialLinkServiceImpl implements SocialLinkService {
     }
 
     @Override
+    @Transactional
     public void deleteSocialLinkById(Long id, String email) {
         SocialLink deletedSocialLink = socialLinkRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(

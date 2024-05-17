@@ -4,11 +4,12 @@ import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import wander.wise.application.dto.collection.CollectionWithoutCardsDto;
 import wander.wise.application.dto.comment.CommentDto;
@@ -33,11 +34,14 @@ import wander.wise.application.model.Role;
 import wander.wise.application.model.User;
 import wander.wise.application.repository.collection.CollectionRepository;
 import wander.wise.application.repository.comment.CommentRepository;
+import wander.wise.application.repository.user.pseudonym.PseudonymRepository;
 import wander.wise.application.repository.user.UserRepository;
 import wander.wise.application.security.AuthenticationService;
 import wander.wise.application.security.JwtUtil;
 import wander.wise.application.service.api.email.EmailService;
 import wander.wise.application.service.api.storage.StorageService;
+
+import static wander.wise.application.constants.GlobalConstants.DIVIDER;
 
 @Service
 @RequiredArgsConstructor
@@ -45,14 +49,11 @@ public class UserServiceImpl implements UserService {
     private static final long ROOT_ID = 1L;
     private static final long ADMIN_ID = 2L;
     private static final long USER_ID = 3L;
-    private static final String GET_ADJECTIVE = "SELECT name FROM username_adjectives where id = ";
-    private static final String GET_COLOR = "SELECT name FROM username_colors where id = ";
-    private static final String GET_ANIMAL = "SELECT name FROM username_animals where id = ";
     private static final String EMAIL_CONFIRM_SUBJECT = "Email confirmation";
+    private static final String RESTORE_PASSWORD_SUBJECT = "New password";
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder encoder;
-    private final JdbcTemplate jdbcTemplate;
     private final Random random = new Random();
     private final EmailService emailService;
     private final JwtUtil jwtUtil;
@@ -63,8 +64,10 @@ public class UserServiceImpl implements UserService {
     private final StorageService storageService;
     private final CommentRepository commentRepository;
     private final CommentMapper commentMapper;
+    private final PseudonymRepository pseudonymRepository;
 
     @Override
+    @Transactional
     public UserDto save(RegisterUserRequestDto requestDto) {
         if (userRepository.existsByEmail(requestDto.email())) {
             throw new RegistrationException("Account with this "
@@ -78,10 +81,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public LoginResponseDto confirmEmail(String email) {
-        User updatedUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + email));
+        User updatedUser = findUserEntityByEmail(email);
         updatedUser.setBanned(false);
         UserDto savedUser = userMapper.toDto(userRepository.save(updatedUser));
         String token = jwtUtil.generateToken(updatedUser.getEmail());
@@ -116,6 +118,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public Set<CommentDto> getUserComments(Long id, String email) {
         User user = findUserAndAuthorize(id, email);
         Set<CommentDto> userComments = commentRepository.getAllByUserEmail(email)
@@ -126,20 +129,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void restorePassword(RestorePasswordRequestDto requestDto) {
-        User updatedUser = userRepository.findByEmail(requestDto.email())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + requestDto.email()));
-        String newPassword = "" + random.nextInt(100000000, 999999999);
+        User updatedUser = findUserEntityByEmail(requestDto.email());
+        String newPassword = ("" + UUID.randomUUID()).replaceAll("-", "");
         updatedUser.setPassword(encoder.encode(newPassword));
         userRepository.save(updatedUser);
         emailService.sendEmail(
                 requestDto.email(),
-                EMAIL_CONFIRM_SUBJECT,
+                RESTORE_PASSWORD_SUBJECT,
                 newPassword);
     }
 
     @Override
+    @Transactional
     public UserDto updateUserInfo(Long id, String email, UpdateUserInfoRequestDto requestDto) {
         User updatedUser = findUserAndAuthorize(id, email);
         if (userRepository.existsByPseudonym(requestDto.pseudonym())) {
@@ -151,6 +154,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserDto updateUserImage(Long id, String email, MultipartFile userImage) {
         User updatedUser = findUserAndAuthorize(id, email);
         if (updatedUser.getProfileImage() != null) {
@@ -170,10 +174,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserDto updateUserRoles(Long id, UpdateUserRolesRequestDto requestDto) {
-        User updatedUser = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by id: " + id));
+        User updatedUser = findUserEntityById(id);
         Set<Role> newRoles = requestDto
                 .roleIds()
                 .stream()
@@ -194,6 +197,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public LoginResponseDto updateUserEmail(Long id, String email,
                                             UpdateUserEmailRequestDto requestDto) {
         User updatedUser = findUserAndAuthorize(id, email);
@@ -204,6 +208,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public LoginResponseDto updateUserPassword(Long id, String email,
                                                UpdateUserPasswordRequestDto requestDto) {
         LoginRequestDto checkLogin = new LoginRequestDto(email, requestDto.oldPassword());
@@ -216,38 +221,49 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUser(Long id, String email) {
         User updatedUser = findUserAndAuthorize(id, email);
         userRepository.deleteById(updatedUser.getId());
     }
 
     @Override
+    @Transactional
     public UserDto banUser(Long id) {
-        User updatedUser = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by id: " + id));
+        User updatedUser = findUserEntityById(id);
         updatedUser.setBanned(true);
         return userMapper.toDto(userRepository.save(updatedUser));
     }
 
     @Override
+    @Transactional
     public UserDto unbanUser(Long id) {
-        User updatedUser = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by id: " + id));
+        User updatedUser = findUserEntityById(id);
         updatedUser.setBanned(false);
         return userMapper.toDto(userRepository.save(updatedUser));
     }
 
     @Override
     public User findUserAndAuthorize(Long id, String email) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by id: " + id));
+        User user = findUserEntityById(id);
         if (!user.getEmail().equals(email)) {
             throw new AuthorizationException("Access denied.");
         }
         return user;
+    }
+
+    @Override
+    public User findUserEntityById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find user by id: " + id));
+    }
+
+    @Override
+    public User findUserEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find user by email: " + email));
     }
 
     private User createAndInitializeUser(RegisterUserRequestDto requestDto) {
@@ -287,13 +303,11 @@ public class UserServiceImpl implements UserService {
 
     private String generatePseudonym() {
         StringBuilder pseudonym = new StringBuilder();
-        pseudonym.append(jdbcTemplate.queryForObject(GET_ADJECTIVE
-                        + random.nextInt(1, 100), String.class))
-                .append(jdbcTemplate.queryForObject(GET_COLOR
-                        + random.nextInt(1, 100), String.class))
-                .append(jdbcTemplate.queryForObject(GET_ANIMAL
-                        + random.nextInt(1, 100), String.class))
-                .append(random.nextInt(0, 10000));
+        pseudonym
+                .append(pseudonymRepository.getAdjective())
+                .append(pseudonymRepository.getColor())
+                .append(pseudonymRepository.getAnimal())
+                .append(random.nextInt(1, 10000));
         if (userRepository.existsByPseudonym(pseudonym.toString())) {
             return generatePseudonym();
         }
@@ -309,7 +323,7 @@ public class UserServiceImpl implements UserService {
                         .toList()
                         .get(0)
                         .getImageLinks()
-                        .split("\\|");
+                        .split(DIVIDER);
                 collection.setImageLink(imageLinks[0]);
             }
         });

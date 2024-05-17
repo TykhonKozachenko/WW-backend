@@ -21,3 +21,5 @@ databaseChangeLog:
       file: db/changelog/changes/10-create-username-colors-table.yaml
   - include:
       file: db/changelog/changes/11-create-username-animals-table.yaml
+  - include:
+      file: db/changelog/changes/12-create-invalid_jwts-table.yaml

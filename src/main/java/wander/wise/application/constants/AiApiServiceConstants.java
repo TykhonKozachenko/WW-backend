@@ -22,7 +22,6 @@ public class AiApiServiceConstants {
     public static final String NON_EXISTING_RESTRICT = "It is important that"
             + " the locations exist. "
             + "I will be in danger if travel to non-existing location.";
-    public static final String SEPARATOR = System.lineSeparator();
     public static final String SPECIAL_REQUIREMENTS_LIST = "With pets|With kids|"
             + "LGBTQ friendly|Disability.";
     public static final String SPECIFIC_LOCATION_EXAMPLES = "Examples: square, museum, market, "
@@ -30,6 +29,5 @@ public class AiApiServiceConstants {
             + "embankment, castle etc.";
     public static final String TRIP_TYPES_LIST = "Active|Chill|Native culture|"
             + "Family|Culture|Spiritual|Extreme|Corporate|Nature|Shopping|Romantic|Party";
-    public static final ObjectMapper MAPPER = new ObjectMapper();
     public static final int TOTAL_REQUIRED_RESPONSES_AMOUNT = 30;
 }

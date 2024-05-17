@@ -12,7 +12,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import wander.wise.application.constants.GlobalConstants;
 import wander.wise.application.dto.ai.AiResponseDto;
 import wander.wise.application.dto.card.CardDto;
 import wander.wise.application.dto.card.CardSearchParameters;
@@ -35,6 +37,10 @@ import wander.wise.application.service.api.email.EmailService;
 import wander.wise.application.service.api.images.ImageSearchApiService;
 import wander.wise.application.service.api.maps.MapsApiService;
 import wander.wise.application.service.api.storage.StorageService;
+import wander.wise.application.service.user.UserService;
+
+import static wander.wise.application.constants.GlobalConstants.DIVIDER;
+import static wander.wise.application.constants.GlobalConstants.SEPARATOR;
 
 @Service
 @RequiredArgsConstructor
@@ -52,12 +58,12 @@ public class CardServiceImpl implements CardService {
     private final EmailService emailService;
     private final CollectionRepository collectionRepository;
     private final StorageService storageService;
+    private final UserService userService;
 
     @Override
+    @Transactional
     public CardDto createNewCard(String email, CreateCardRequestDto requestDto) {
-        User author = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + email));
+        User author = userService.findUserEntityByEmail(email);
         if (!author.isBanned()) {
             Card savedCard = cardRepository.save(initializeUsersCard(requestDto, author));
             Collection updatedSavedCards = collectionRepository.findAllByUserEmail(email)
@@ -74,20 +80,19 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public CardDto updateById(Long id, String email, CreateCardRequestDto requestDto) {
         Card updatedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
-        User updatingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + email));
+        User updatingUser = userService.findUserEntityByEmail(email);
         if (updatingUser.getAuthorities().size() > 1
                 || (updatedCard.getAuthor()
                 .equals(updatingUser.getPseudonym())
                 && !updatingUser.isBanned())) {
             updatedCard = cardMapper.updateCardFromRequestDto(updatedCard, requestDto);
             if (updatedCard.getImageLinks().length() > 0) {
-                Arrays.stream(updatedCard.getImageLinks().split("\\|"))
+                Arrays.stream(updatedCard.getImageLinks().split(DIVIDER))
                         .filter(link -> !Arrays.stream(requestDto
                                 .imageLinks()).toList().contains(link))
                         .forEach(link -> storageService.deleteFile(link
@@ -101,13 +106,12 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public CardDto addImagesToCardById(Long id, String email, List<MultipartFile> images) {
         Card updatedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
-        User updatingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + email));
+        User updatingUser = userService.findUserEntityByEmail(email);
         if (updatingUser.getAuthorities().size() > 1
                 || (updatedCard.getAuthor()
                 .equals(updatingUser.getPseudonym())
@@ -143,6 +147,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public boolean addCardToSaved(Long id, String email) {
         Card addedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -163,6 +168,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public boolean removeCardFromSaved(Long id, String email) {
         Card removedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -183,6 +189,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public boolean postLike(Long id, String email) {
         Collection updatedLikedCards = collectionRepository.findAllByUserEmail(email)
                 .stream()
@@ -204,6 +211,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public boolean removeLike(Long id, String email) {
         Card likedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -225,6 +233,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public boolean hideCard(Long id) {
         Card hiddenCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -239,6 +248,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public boolean revealCard(Long id) {
         Card revealedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -253,13 +263,12 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id, String email) {
         Card updatedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find card by id: " + id));
-        User updatingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find user by email: " + email));
+        User updatingUser = userService.findUserEntityByEmail(email);
         if (updatingUser.getAuthorities().size() > 1
                 || updatedCard.getAuthor()
                 .equals(updatingUser.getPseudonym())) {
@@ -270,6 +279,7 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    @Transactional
     public void report(Long id, String email, ReportCardRequestDto requestDto) {
         Card reportedCard = cardRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -277,11 +287,11 @@ public class CardServiceImpl implements CardService {
         reportedCard.setReports(reportedCard.getReports() + 1);
         String message = new StringBuilder()
                 .append("User email: ").append(email)
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Card id: ").append(id)
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Report text: ").append(requestDto.text())
-                .append(System.lineSeparator())
+                .append(SEPARATOR)
                 .append("Card was reported: ")
                 .append(reportedCard.getReports()).append(" times")
                 .toString();
@@ -502,7 +512,7 @@ public class CardServiceImpl implements CardService {
     }
 
     private static String getExcludeLocationName(Card card) {
-        String[] fullNameArray = card.getFullName().split("\\|");
+        String[] fullNameArray = card.getFullName().split(DIVIDER);
         return new StringBuilder()
                 .append(fullNameArray[0])
                 .append(" (")
@@ -512,7 +522,7 @@ public class CardServiceImpl implements CardService {
     }
 
     private static String getSearchKey(String fullName) {
-        String[] searchKeyArray = fullName.split("\\|");
+        String[] searchKeyArray = fullName.split(DIVIDER);
         String searchKey = new StringBuilder()
                 .append(searchKeyArray[0])
                 .append(" ")

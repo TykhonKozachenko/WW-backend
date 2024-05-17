@@ -1,11 +1,13 @@
 package wander.wise.application.exception;
 
-import jakarta.persistence.EntityNotFoundException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -17,18 +19,23 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import wander.wise.application.exception.custom.AiException;
+import wander.wise.application.dto.exception.ExceptionDto;
+import wander.wise.application.dto.exception.ExceptionResponseDto;
 import wander.wise.application.exception.custom.AuthorizationException;
 import wander.wise.application.exception.custom.CardSearchException;
 import wander.wise.application.exception.custom.EmailServiceException;
-import wander.wise.application.exception.custom.ImageSearchException;
+import wander.wise.application.exception.custom.ImageSearchServiceException;
 import wander.wise.application.exception.custom.JwtValidationException;
-import wander.wise.application.exception.custom.MapsException;
+import wander.wise.application.exception.custom.AiServiceException;
+import wander.wise.application.exception.custom.MapsServiceException;
 import wander.wise.application.exception.custom.RegistrationException;
-import wander.wise.application.exception.custom.StorageException;
+import wander.wise.application.exception.custom.StorageServiceException;
 
 @ControllerAdvice
 public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    public static final String TIMESTAMP_PATTERN = "dd.MM.yyyy HH:mm:ss";
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception,
@@ -47,71 +54,64 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
         return new ResponseEntity<>(body, headers, status);
     }
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<String> handleEntityNotFoundException(EntityNotFoundException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.NOT_FOUND);
+    @ExceptionHandler(Throwable.class)
+    public ResponseEntity<ExceptionResponseDto> handleException(Throwable exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(AiException.class)
-    public ResponseEntity<String> handleAiException(AiException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ExceptionResponseDto> handleEntityNotFoundException(EntityNotFoundException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<ExceptionResponseDto> handleAiException(AiServiceException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(AuthorizationException.class)
-    public ResponseEntity<String> handleAuthorizationException(AuthorizationException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.FORBIDDEN);
+    public ResponseEntity<ExceptionResponseDto> handleAuthorizationException(AuthorizationException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(CardSearchException.class)
-    public ResponseEntity<String> handleCardSearchException(CardSearchException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.NOT_FOUND);
+    public ResponseEntity<ExceptionResponseDto> handleCardSearchException(CardSearchException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(EmailServiceException.class)
-    public ResponseEntity<String> handleEmailServiceException(EmailServiceException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ExceptionResponseDto> handleEmailServiceException(EmailServiceException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(ImageSearchException.class)
-    public ResponseEntity<String> handleImageSearchException(ImageSearchException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(ImageSearchServiceException.class)
+    public ResponseEntity<ExceptionResponseDto> handleImageSearchException(ImageSearchServiceException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(JwtValidationException.class)
-    public ResponseEntity<String> handleJwtValidationException(JwtValidationException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<ExceptionResponseDto> handleJwtValidationException(JwtValidationException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.UNAUTHORIZED);
     }
 
-    @ExceptionHandler(MapsException.class)
-    public ResponseEntity<String> handleMapsException(MapsException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(MapsServiceException.class)
+    public ResponseEntity<ExceptionResponseDto> handleMapsException(MapsServiceException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(RegistrationException.class)
-    public ResponseEntity<String> handleRegistrationException(RegistrationException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.CONFLICT);
+    public ResponseEntity<ExceptionResponseDto> handleRegistrationException(RegistrationException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
-    public ResponseEntity<String> handleSqlIntegrityConstraintViolationException(
-            SQLIntegrityConstraintViolationException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ExceptionResponseDto> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(StorageException.class)
-    public ResponseEntity<String> handleStorageException(StorageException exception) {
-        return new ResponseEntity<>(getResponseMessage(exception),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(StorageServiceException.class)
+    public ResponseEntity<ExceptionResponseDto> handleStorageServiceException(StorageServiceException exception) {
+        return new ResponseEntity<>(getResponseMessage(exception), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     private String getErrorMessage(ObjectError error) {
@@ -123,21 +123,28 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
         return error.getDefaultMessage();
     }
 
-    private static String getResponseMessage(Exception exception) {
+    private static ExceptionResponseDto getResponseMessage(Throwable exception) {
         String exceptionName = exception.getClass().getName();
-        StringBuilder builder = new StringBuilder();
-        builder.append(exceptionName.substring(exceptionName.lastIndexOf(".") + 1))
-                .append(": ")
-                .append(exception.getMessage());
+        ExceptionDto exceptionDto
+                = new ExceptionDto(
+                        exceptionName.substring(exceptionName
+                                .lastIndexOf(".") + 1),
+                exception.getMessage());
+        LocalDateTime timeStamp = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(TIMESTAMP_PATTERN);
+        ExceptionResponseDto message = new ExceptionResponseDto(
+                timeStamp.format(formatter),
+                exceptionDto,
+                null);
         if (exception.getCause() != null) {
-            Throwable causeException = exception.getCause();
-            String causeExceptionName = causeException.getClass().getName();
-            builder.append(System.lineSeparator())
-                    .append("Caused by ")
-                    .append(causeExceptionName.substring(causeExceptionName.lastIndexOf(".") + 1))
-                    .append(": ")
-                    .append(causeException.getMessage());
+            Throwable cause = exception.getCause();
+            String causeName = cause.getClass().getName();
+            ExceptionDto causeDto = new ExceptionDto(
+                    causeName.substring(causeName
+                            .lastIndexOf(".") + 1),
+                    cause.getMessage());
+            message = message.setCause(causeDto);
         }
-        return builder.toString();
+        return message;
     }
 }

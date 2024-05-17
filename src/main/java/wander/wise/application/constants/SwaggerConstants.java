@@ -2,7 +2,7 @@ package wander.wise.application.constants;
 
 public class SwaggerConstants {
     /**
-     * Authorization controller documentation
+     * Authentication controller documentation
      */
     public static final String REGISTER_NEW_USER_SUM = "Register a new user";
     public static final String REGISTER_NEW_USER_DESC = """
@@ -93,6 +93,22 @@ public class SwaggerConstants {
             5. **Other related information:**
             - The endpoint generates a new random password, 
             encodes it, and sends it to the user's email.""";
+    public static final String LOGOUT_SUM = "Logout a user";
+    public static final String LOGOUT_DESC = """
+            1. **Possible response codes and messages:**
+            - `200 OK`: Success logout.
+            - `403 FORBIDDEN`: Access denied.
+            - `401 UNAUTHORIZED`: Expired or invalid JWT token.
+            2. **Authorities that have access to the endpoint:**
+            - `USER`
+            3. **Exceptions that can be thrown:**
+            - `AuthorizationException`: Access denied or token was invalidated.
+            - `JwtValidationException`: Expired or invalid JWT token.
+            4. **Request fields constraints (according to validation):**
+            - `token`: Must be a valid JWT token corresponding to the logged-in user.
+            5. **Other related information:**
+            - The token must not be expired or previously invalidated.
+            - The token must belong to the authenticated user.""";
 
     /**
      * Cards controller documentation

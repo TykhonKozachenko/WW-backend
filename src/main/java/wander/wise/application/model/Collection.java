@@ -1,14 +1,23 @@
 package wander.wise.application.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SoftDelete;
-
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 
 @Entity
 @Table(name = "collections")
@@ -30,14 +39,18 @@ public class Collection {
             name = "collection_card",
             joinColumns = @JoinColumn(name = "collection_id"),
             inverseJoinColumns = @JoinColumn(name = "card_id"))
-    Set<Card> cards = new HashSet<>();
+    private Set<Card> cards = new HashSet<>();
     @Column(name = "is_public")
-    boolean isPublic = false;
+    private boolean isPublic = false;
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Collection that)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Collection that)) {
+            return false;
+        }
         return isPublic == that.isPublic
                 && Objects.equals(id, that.id)
                 && Objects.equals(user, that.user)

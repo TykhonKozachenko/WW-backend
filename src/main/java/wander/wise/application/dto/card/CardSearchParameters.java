@@ -1,7 +1,9 @@
 package wander.wise.application.dto.card;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record CardSearchParameters(
-        String startLocation,
+        @NotBlank String startLocation,
         String[] tripTypes,
         String[] climate,
         String[] specialRequirements,

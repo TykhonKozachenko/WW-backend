@@ -1,20 +1,59 @@
 package wander.wise.application.controller;
 
-import java.util.List;
+import static wander.wise.application.constants.SwaggerConstants.ADD_CARD_TO_SAVED_DESC;
+import static wander.wise.application.constants.SwaggerConstants.ADD_CARD_TO_SAVED_SUM;
+import static wander.wise.application.constants.SwaggerConstants.ADD_IMAGES_TO_CARD_BY_ID_DESC;
+import static wander.wise.application.constants.SwaggerConstants.ADD_IMAGES_TO_CARD_BY_ID_SUM;
+import static wander.wise.application.constants.SwaggerConstants.CREATE_NEW_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.CREATE_NEW_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.DELETE_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.DELETE_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.FIND_CARD_BY_ID_AS_ADMIN_DESC;
+import static wander.wise.application.constants.SwaggerConstants.FIND_CARD_BY_ID_AS_ADMIN_SUM;
+import static wander.wise.application.constants.SwaggerConstants.FIND_CARD_BY_ID_DESC;
+import static wander.wise.application.constants.SwaggerConstants.FIND_CARD_BY_ID_SUM;
+import static wander.wise.application.constants.SwaggerConstants.HIDE_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.HIDE_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.POST_LIKE_TO_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.POST_LIKE_TO_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.REMOVE_CARD_FROM_SAVED_DESC;
+import static wander.wise.application.constants.SwaggerConstants.REMOVE_CARD_FROM_SAVED_SUM;
+import static wander.wise.application.constants.SwaggerConstants.REMOVE_LIKE_FROM_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.REMOVE_LIKE_FROM_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.REPORT_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.REPORT_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.REVEAL_CARD_DESC;
+import static wander.wise.application.constants.SwaggerConstants.REVEAL_CARD_SUM;
+import static wander.wise.application.constants.SwaggerConstants.SEARCH_CARDS_DESC;
+import static wander.wise.application.constants.SwaggerConstants.SEARCH_CARDS_SUM;
+import static wander.wise.application.constants.SwaggerConstants.UPDATE_CARD_BY_ID_DESC;
+import static wander.wise.application.constants.SwaggerConstants.UPDATE_CARD_BY_ID_SUM;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import wander.wise.application.dto.card.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import wander.wise.application.dto.card.CardDto;
+import wander.wise.application.dto.card.CardSearchParameters;
+import wander.wise.application.dto.card.CreateCardRequestDto;
+import wander.wise.application.dto.card.ReportCardRequestDto;
+import wander.wise.application.dto.card.SearchCardsResponseDto;
 import wander.wise.application.service.card.CardService;
 
 @Tag(name = "Card management endpoints")
@@ -22,476 +61,170 @@ import wander.wise.application.service.card.CardService;
 @RequestMapping("/cards")
 @RequiredArgsConstructor
 public class CardController {
+    private static final String REPORT_EMAIL = "budzetbudzet4@gmail.com";
     private final CardService cardService;
 
-    @Operation(
-            summary = "Search Cards",
-            description = "Allows searching for cards based "
-                    + "on various parameters. Can be accessed "
-                    + "by unauthorized users. "
-                    + "Returns a paginated list of CardDto "
-                    + "objects that match the criteria. "
-                    + "\n\n**Request Body Example:**\n\n"
-                    + "{\n\n"
-                    + "  \"startLocation\": \"Tokyo,Japan\",\n\n"
-                    + "  \"tripTypes\": [\"Adventure\", \"Nature\"],\n\n"
-                    + "  \"climate\": [\"Temperate\"],\n\n"
-                    + "  \"specialRequirements\": [\"Pet-friendly\", \"Disability access\"],\n\n"
-                    + "  \"travelDistance\": [\"Country\"],\n\n"
-                    + "  \"author\": [\"AI\"]\n\n"
-                    + "}\n\n\n\n"
-                    + "\n\n**CORRECT JSON FOR PAGEABLE:**\n\n"
-                    + "{\n\n"
-                    + "  \"page\": 0,\n\n"
-                    + "  \"size\": 8,\n\n"
-                    + "  \"sort\": \"asc\"\n\n"
-                    + "}\n\n\n\n"
-                    + "Author field can have 3 configurations: "
-                    + "[\"AI\"] - only generated cards, [\"User\"] "
-                    + "- only custom cards, [] - cards by all authors\n\n"
-                    + "Trip distance field can have 5 configurations: "
-                    + "[\"AI\"] - Populated locality, Region, Country, "
-                    + "Continent, <Specific location>. In the first 4 cases "
-                    + "you should pass exactly the same parameter, as in this "
-                    + "description. Otherwise server won't work correctly.\n\n"
-                    + "\n\n**Response Body Example:**\n\n"
-                    + "[\n\n"
-                    + "  {\n\n"
-                    + "    \"id\": 1,\n\n"
-                    + "    \"name\": \"Mount Fuji Adventure\",\n\n"
-                    + "    \"author\": \"Author1\",\n\n"
-                    + "    \"tripTypes\": [\"Active\", \"Nature\"],\n\n"
-                    + "    \"climate\": \"Temperate\",\n\n"
-                    + "    \"specialRequirements\": [\"Hiking gear required\"],\n\n"
-                    + "    \"whereIs\": \"Shizuoka, Japan\",\n\n"
-                    + "    \"description\": \"A thrilling journey to the peak of Mount Fuji...\",\n\n"
-                    + "    \"whyThisPlace\": [\"UNESCO World Heritage site\", \"Iconic mountain\"],\n\n"
-                    + "    \"imageLinks\": [\"linkToImage1.jpg\", \"linkToImage2.jpg\"],\n\n"
-                    + "    \"mapLink\": \"linkToMap\",\n\n"
-                    + "    \"distance\": 100,\n\n"
-                    + "    \"likes\": 250,\n\n"
-                    + "    \"comments\": [CommentDto1, CommentDto2]\n\n"
-                    + "    \"shown\": true\n\n"
-                    + "  },\n\n"
-                    + "  // More CardDto objects\n\n"
-                    + "]\n\n\n\n"
-                    + "**Possible Exceptions:**\n\n"
-                    + "- `CardSearchException` there is not enough "
-                    + "cards in db and ai also can't generate enough.\n\n"
-                    + "- `AiException` ai returns incorrect data."
-    )
     @PostMapping("/search")
-    List<CardDto> search(@RequestBody CardSearchParameters searchParameters, Pageable pageable) {
+    @Operation(summary = SEARCH_CARDS_SUM, description = SEARCH_CARDS_DESC)
+    public SearchCardsResponseDto search(@RequestBody CardSearchParameters searchParameters,
+                                         Pageable pageable) {
         return cardService.search(pageable, searchParameters);
     }
 
-    @Operation(
-            summary = "Find Card by ID",
-            description = "Retrieves a card's details "
-                    + "without distance information by its ID. "
-                    + "Only users with roles 'ROLE_USER' "
-                    + "or 'ROLE_ADMIN' can access this endpoint. "
-                    + "\n\n\n\n**Request:**\n\n"
-                    + "GET /details/{id}\n\n"
-                    + "Path Variable: id (Long) - The unique "
-                    + "identifier of the card.\n\n"
-                    + "**Response Body Example:**\n\n"
-                    + "[\n\n"
-                    + "  {\n\n"
-                    + "    \"id\": 1,\n\n"
-                    + "    \"name\": \"Mount Fuji Adventure\",\n\n"
-                    + "    \"author\": \"Author1\",\n\n"
-                    + "    \"tripTypes\": [\"Active\", \"Nature\"],\n\n"
-                    + "    \"climate\": \"Temperate\",\n\n"
-                    + "    \"specialRequirements\": [\"Hiking gear required\"],\n\n"
-                    + "    \"whereIs\": \"Shizuoka, Japan\",\n\n"
-                    + "    \"description\": \"A thrilling journey to the peak of Mount Fuji...\",\n\n"
-                    + "    \"whyThisPlace\": [\"UNESCO World Heritage site\", \"Iconic mountain\"],\n\n"
-                    + "    \"imageLinks\": [\"linkToImage1.jpg\", \"linkToImage2.jpg\"],\n\n"
-                    + "    \"mapLink\": \"linkToMap\",\n\n"
-                    + "    \"likes\": 250,\n\n"
-                    + "    \"comments\": [CommentDto1, CommentDto2]\n\n"
-                    + "    \"shown\": true\n\n"
-                    + "  }\n\n"
-                    + "\n\n**Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the "
-                    + "card with the given ID does not exist "
-                    + "or is not shown."
-    )
     @GetMapping("/details/{id}")
-    public CardWithoutDistanceDto findById(@PathVariable Long id) {
+    @Operation(summary = FIND_CARD_BY_ID_SUM, description = FIND_CARD_BY_ID_DESC)
+    public CardDto findById(@PathVariable Long id) {
         return cardService.findById(id);
     }
 
-    @Operation(
-            summary = "Retrieve Card Details as Admin",
-            description = "Fetches the complete details "
-                    + "of a card by its ID, accessible only "
-                    + "by users with 'ADMIN' authority. "
-                    + "This admin-specific endpoint bypasses "
-                    + "the 'shown' property check, allowing "
-                    + "access to all cards regardless of their "
-                    + "visibility status. "
-                    + "\n\n\n\n**Request:**\n\n"
-                    + "GET /as-admin/{id}\n\n"
-                    + "Path Variable: id (Long) - The unique "
-                    + "identifier of the card to retrieve.\n\n"
-                    + "**Response Body Example:**\n\n"
-                    + "[\n\n"
-                    + "  {\n\n"
-                    + "    \"id\": 1,\n\n"
-                    + "    \"name\": \"Mount Fuji Adventure\",\n\n"
-                    + "    \"author\": \"Author1\",\n\n"
-                    + "    \"tripTypes\": [\"Active\", \"Nature\"],\n\n"
-                    + "    \"climate\": \"Temperate\",\n\n"
-                    + "    \"specialRequirements\": [\"Hiking gear required\"],\n\n"
-                    + "    \"whereIs\": \"Shizuoka, Japan\",\n\n"
-                    + "    \"description\": \"A thrilling journey to the peak of Mount Fuji...\",\n\n"
-                    + "    \"whyThisPlace\": [\"UNESCO World Heritage site\", \"Iconic mountain\"],\n\n"
-                    + "    \"imageLinks\": [\"linkToImage1.jpg\", \"linkToImage2.jpg\"],\n\n"
-                    + "    \"mapLink\": \"linkToMap\",\n\n"
-                    + "    \"likes\": 250,\n\n"
-                    + "    \"comments\": [CommentDto1, CommentDto2]\n\n"
-                    + "    \"shown\": true\n\n"
-                    + "  }\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if no card "
-                    + "is found with the provided ID."
-    )
     @GetMapping("/as-admin/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public CardWithoutDistanceDto findByIdAsAdmin(@PathVariable Long id) {
+    @Operation(summary = FIND_CARD_BY_ID_AS_ADMIN_SUM, description = FIND_CARD_BY_ID_AS_ADMIN_DESC)
+    public CardDto findByIdAsAdmin(@PathVariable Long id) {
         return cardService.findByIdAsAdmin(id);
     }
 
-    @Operation(
-            summary = "Create a New Card",
-            description = "Allows a user with 'USER' "
-                    + "authority to create a new card. "
-                    + "The card details are provided in "
-                    + "the request body. "
-                    + "Upon successful creation, the card "
-                    + "details are returned without distance "
-                    + "information. "
-                    + "\n\n\n\n**Request Body Example:**\n\n"
-                    + "{\n\n"
-                    + "  \"fullName\": \"Location name|Populated "
-                    + "locality|Region|Country|Continent\",\n\n"
-                    + "  \"tripTypes\": \"Type|Type|Type\",\n\n"
-                    + "  \"climate\": \"Climate\",\n\n"
-                    + "  \"specialRequirements\": \"Requirement|Requirement\",\n\n"
-                    + "  \"description\": \"Description\",\n\n"
-                    + "  \"whyThisPlace\": \"Reason|Reason|Reason\",\n\n"
-                    + "  \"imageLinks\": \"Link|Link|Link\",\n\n"
-                    + "  \"mapLink\": \"Link\"\n\n"
-                    + "}\n\n"
-                    + "**Response Body Example:**\n\n"
-                    + "[\n\n"
-                    + "  {\n\n"
-                    + "    \"id\": 1,\n\n"
-                    + "    \"name\": \"Mount Fuji Adventure\",\n\n"
-                    + "    \"author\": \"Author1\",\n\n"
-                    + "    \"tripTypes\": [\"Active\", \"Nature\"],\n\n"
-                    + "    \"climate\": \"Temperate\",\n\n"
-                    + "    \"specialRequirements\": [\"Hiking gear required\"],\n\n"
-                    + "    \"whereIs\": \"Shizuoka, Japan\",\n\n"
-                    + "    \"description\": \"A thrilling journey to "
-                    + "the peak of Mount Fuji...\",\n\n"
-                    + "    \"whyThisPlace\": [\"UNESCO World "
-                    + "Heritage site\", \"Iconic mountain\"],\n\n"
-                    + "    \"imageLinks\": [\"linkToImage1.jpg\", "
-                    + "\"linkToImage2.jpg\"],\n\n"
-                    + "    \"mapLink\": \"linkToMap\",\n\n"
-                    + "    \"likes\": 250,\n\n"
-                    + "    \"comments\": [CommentDto1, "
-                    + "CommentDto2]\n\n"
-                    + "    \"shown\": true\n\n"
-                    + "  }\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the "
-                    + "user's email is not found.\n\n"
-                    + "- `AuthorizationException` if the "
-                    + "user is banned and therefore denied access."
-    )
     @PostMapping
     @PreAuthorize("hasAuthority('USER')")
-    public CardWithoutDistanceDto createNewCard(Authentication authentication, @Valid @RequestBody CreateCardRequestDto requestDto) {
+    @Operation(summary = CREATE_NEW_CARD_SUM, description = CREATE_NEW_CARD_DESC)
+    public CardDto createNewCard(
+            Authentication authentication,
+            @Valid @RequestBody CreateCardRequestDto requestDto) {
         return cardService.createNewCard(authentication.getName(), requestDto);
     }
 
-    @Operation(
-            summary = "Add Card to \"Saved cards\" collection",
-            description = "Allows a user with 'USER' authority "
-                    + "to add a specific card to their 'Saved cards' "
-                    + "collection. "
-                    + "The card is identified by its ID, which "
-                    + "is provided in the path variable. "
-                    + "This operation does not return a body, but "
-                    + "it updates the user's collection of saved cards. "
-                    + "\n\n\n\n**Request:**\n\n"
-                    + "PUT /add-to-saved/{id}\n\n"
-                    + "Path Variable: id (Long) - The unique identifier "
-                    + "of the card to be added to the saved collection.\n\n"
-                    + "\n\n**Response:**\n\n"
-                    + "This endpoint does not return a response body. "
-                    + "On successful execution, it will result in an "
-                    + "HTTP 200 OK status. "
-                    + "\n\n\n\n**Roles with Access:**\n\n"
-                    + "- 'USER'\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the card with "
-                    + "the given ID is not found."
-    )
     @PutMapping("/add-to-saved/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public void addCardToSaved(@PathVariable Long id, Authentication authentication) {
-        cardService.addCardToSaved(id, authentication.getName());
+    @Operation(summary = ADD_CARD_TO_SAVED_SUM, description = ADD_CARD_TO_SAVED_DESC)
+    public ResponseEntity<String> addCardToSaved(@PathVariable Long id,
+                                                 Authentication authentication) {
+        if (cardService.addCardToSaved(id, authentication.getName())) {
+            return new ResponseEntity<>(
+                    "Card was successfully added to \"Saved cards\" collection.",
+                    HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(
+                    "Duplicate request. Card has already been added to \"Saved cards\" collection.",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @Operation(
-            summary = "Remove Card from \"Saved cards\" collection",
-            description = "Enables a user with 'USER' "
-                    + "authority to remove a card from their "
-                    + "'Saved cards' collection. "
-                    + "The card to be removed is identified "
-                    + "by its ID, provided in the path variable. "
-                    + "This operation does not return a body, "
-                    + "but it updates the user's collection by "
-                    + "removing the specified card. "
-                    + "\n\n\n\n**Request:**\n\n"
-                    + "PUT /remove-from-saved/{id}\n\n"
-                    + "Path Variable: id (Long) - The unique "
-                    + "identifier of the card to be removed from "
-                    + "the saved collection.\n\n"
-                    + "\n\n**Response:**\n\n"
-                    + "This endpoint does not return a response "
-                    + "body. On successful execution, it will "
-                    + "result in an HTTP 200 OK status. "
-                    + "\n\n\n\n**Roles with Access:**\n\n"
-                    + "- 'USER'\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the card "
-                    + "with the given ID is not found in the user's "
-                    + "'Saved cards' collection."
-    )
     @PutMapping("/remove-from-saved/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public void removeCardFromSaved(@PathVariable Long id, Authentication authentication) {
-        cardService.removeCardFromSaved(id, authentication.getName());
+    @Operation(summary = REMOVE_CARD_FROM_SAVED_SUM, description = REMOVE_CARD_FROM_SAVED_DESC)
+    public ResponseEntity<String> removeCardFromSaved(@PathVariable Long id,
+                                                      Authentication authentication) {
+        if (cardService.removeCardFromSaved(id, authentication.getName())) {
+            return new ResponseEntity<>(
+                    "Card was successfully removed from \"Saved cards\" collection.",
+                    HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(
+                    "Error. \"Saved cards\" collection does not contain this card.",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @Operation(
-            summary = "Update Card Details",
-            description = "Updates the details of an existing "
-                    + "card by its ID for users with 'USER' "
-                    + "or higher authority. "
-                    + "The request body must contain the updated "
-                    + "card information. "
-                    + "Only the card's author or users with "
-                    + "multiple authorities can update the card, "
-                    + "provided the user is not banned. "
-                    + "\n\n\n\n**Request Body Example:**\n\n"
-                    + "{\n\n"
-                    + "  \"fullName\": \"Location name|Populated "
-                    + "locality|Region|Country|Continent\",\n\n"
-                    + "  \"tripTypes\": \"Type|Type|Type\",\n\n"
-                    + "  \"climate\": \"Climate\",\n\n"
-                    + "  \"specialRequirements\": \"Requirement|Requirement\",\n\n"
-                    + "  \"description\": \"Description\",\n\n"
-                    + "  \"whyThisPlace\": \"Reason|Reason|Reason\",\n\n"
-                    + "  \"imageLinks\": \"Link|Link|Link\",\n\n"
-                    + "  \"mapLink\": \"Link\"\n\n"
-                    + "}\n\n"
-                    + "**Response Body Example:**\n\n"
-                    + "[\n\n"
-                    + "  {\n\n"
-                    + "    \"id\": 1,\n\n"
-                    + "    \"name\": \"Mount Fuji Adventure\",\n\n"
-                    + "    \"author\": \"Author1\",\n\n"
-                    + "    \"tripTypes\": [\"Active\", \"Nature\"],\n\n"
-                    + "    \"climate\": \"Temperate\",\n\n"
-                    + "    \"specialRequirements\": [\"Hiking gear required\"],\n\n"
-                    + "    \"whereIs\": \"Shizuoka, Japan\",\n\n"
-                    + "    \"description\": \"A thrilling journey to "
-                    + "the peak of Mount Fuji...\",\n\n"
-                    + "    \"whyThisPlace\": [\"UNESCO World "
-                    + "Heritage site\", \"Iconic mountain\"],\n\n"
-                    + "    \"imageLinks\": [\"linkToImage1.jpg\", "
-                    + "\"linkToImage2.jpg\"],\n\n"
-                    + "    \"mapLink\": \"linkToMap\",\n\n"
-                    + "    \"likes\": 250,\n\n"
-                    + "    \"comments\": [CommentDto1, "
-                    + "CommentDto2]\n\n"
-                    + "    \"shown\": true\n\n"
-                    + "  }\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the card "
-                    + "or user is not found by ID or email respectively.\n\n"
-                    + "- `AuthorizationException` if the user "
-                    + "is banned or does not have the authority "
-                    + "to update the card."
-    )
     @PutMapping("/update/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public CardWithoutDistanceDto updateById(@PathVariable Long id, Authentication authentication, @Valid @RequestBody CreateCardRequestDto requestDto) {
+    @Operation(summary = UPDATE_CARD_BY_ID_SUM, description = UPDATE_CARD_BY_ID_DESC)
+    public CardDto updateById(
+            @PathVariable Long id,
+            Authentication authentication,
+            @Valid @RequestBody CreateCardRequestDto requestDto) {
         return cardService.updateById(id, authentication.getName(), requestDto);
     }
 
-    @Operation(
-            summary = "Post a Like on a Card",
-            description = "Allows a user with 'USER' "
-                    + "authority to like a card. "
-                    + "The card's like count is incremented, "
-                    + "and the card is added to the user's "
-                    + "'Liked cards' collection. "
-                    + "\n\n\n\n**Request:**\n\n"
-                    + "PUT /post-like/{id}\n\n"
-                    + "Path Variable: id (Long) - The unique "
-                    + "identifier of the card to like.\n\n"
-                    + "\n\n**Response:**\n\n"
-                    + "This endpoint does not return a response "
-                    + "body. On successful execution, it will "
-                    + "result in an HTTP 200 OK status. "
-                    + "\n\n\n\n**Roles with Access:**\n\n"
-                    + "- 'USER'\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the card "
-                    + "with the given ID is not found."
-    )
+    @PutMapping("/add-images/{id}")
+    @PreAuthorize("hasAuthority('USER')")
+    @Operation(summary = ADD_IMAGES_TO_CARD_BY_ID_SUM, description = ADD_IMAGES_TO_CARD_BY_ID_DESC)
+    public CardDto addImagesToCardById(
+            @PathVariable Long id,
+            Authentication authentication,
+            @RequestParam(value = "images") MultipartFile[] images) {
+        return cardService.addImagesToCardById(id,
+                authentication.getName(),
+                Arrays.stream(images).toList());
+    }
+
     @PutMapping("/post-like/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public void postLike(@PathVariable Long id, Authentication authentication) {
-        cardService.postLike(id, authentication.getName());
+    @Operation(summary = POST_LIKE_TO_CARD_SUM, description = POST_LIKE_TO_CARD_DESC)
+    public ResponseEntity<String> postLike(@PathVariable Long id, Authentication authentication) {
+        if (cardService.postLike(id, authentication.getName())) {
+            return new ResponseEntity<>(
+                    "Card was liked.",
+                    HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(
+                    "Denied. Can't like one card multiple times.",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @Operation(
-            summary = "Remove a Like from a Card",
-            description = "Permits a user with 'USER' "
-                    + "authority to remove a like from a card. "
-                    + "The card's like count is decremented, "
-                    + "and the card is removed from the user's "
-                    + "'Liked cards' collection. "
-                    + "\n\n\n\n**Request:**\n\n"
-                    + "PUT /remove-like/{id}\n\n"
-                    + "Path Variable: id (Long) - The unique "
-                    + "identifier of the card from which the "
-                    + "like is to be removed.\n\n"
-                    + "\n\n**Response:**\n\n"
-                    + "This endpoint does not return a response "
-                    + "body. Upon successful execution, it will "
-                    + "result in an HTTP 200 OK status. "
-                    + "\n\n\n\n**Roles with Access:**\n\n"
-                    + "- 'USER'\n\n"
-                    + "\n\n**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the card "
-                    + "with the given ID is not found or is not "
-                    + "present in the user's 'Liked cards' collection."
-    )
     @PutMapping("/remove-like/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public void removeLike(@PathVariable Long id, Authentication authentication) {
-        cardService.removeLike(id, authentication.getName());
+    @Operation(summary = REMOVE_LIKE_FROM_CARD_SUM, description = REMOVE_LIKE_FROM_CARD_DESC)
+    public ResponseEntity<String> removeLike(@PathVariable Long id, Authentication authentication) {
+        if (cardService.removeLike(id, authentication.getName())) {
+            return new ResponseEntity<>(
+                    "Like was removed.",
+                    HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(
+                    "Denied. Can't remove like from card, that wasn't liked yet.",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @Operation(
-            summary = "Report a Card",
-            description = "Allows a user with 'USER' "
-                    + "authority to report a card. The "
-                    + "user must provide the card's link "
-                    + "and a text description of the issue. "
-                    + "Upon successful reporting, the card's "
-                    + "report count is incremented, and an "
-                    + "email notification is sent.\n\n\n\n"
-                    + "**Request Body Example:**\n\n"
-                    + "{\n\n"
-                    + "  \"cardLink\": \"http://example.com/card/42\",\n\n"
-                    + "  \"text\": \"This card contains "
-                    + "inappropriate content.\"\n\n"
-                    + "}\n\n\n\n"
-                    + "**Roles with Access:**\n\n"
-                    + "- USER\n\n\n\n"
-                    + "**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the "
-                    + "card with the given ID does not exist.\n\n"
-                    + "- `EmailServiceException` if there "
-                    + "is an issue sending the email notification."
-    )
     @PutMapping("/report/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public void report(@PathVariable Long id, Authentication authentication, @Valid @RequestBody ReportCardRequestDto requestDto) {
+    @Operation(summary = REPORT_CARD_SUM, description = REPORT_CARD_DESC)
+    public ResponseEntity<String> report(@PathVariable Long id,
+                                         Authentication authentication,
+                                         @Valid @RequestBody ReportCardRequestDto requestDto) {
         cardService.report(id, authentication.getName(), requestDto);
+        return new ResponseEntity<>(
+                "Report message was sent to email: " 
+                        + REPORT_EMAIL,
+                HttpStatus.OK);
     }
 
-    @Operation(
-            summary = "Hide a Card",
-            description = "Enables an admin to "
-                    + "hide a card from being displayed. "
-                    + "This operation does not require a "
-                    + "request body. When invoked, the "
-                    + "card with the specified ID will "
-                    + "no longer be shown.\n\n\n\n"
-                    + "**Roles with Access:**\n\n"
-                    + "- ADMIN (only users with 'ADMIN' "
-                    + "authority can access this endpoint)\n\n\n\n"
-                    + "**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if "
-                    + "the card with the given ID does "
-                    + "not exist, indicating that no card "
-                    + "could be found with the provided ID."
-    )
-    @PutMapping("/hide-card/{id}")
+    @GetMapping("/hide-card/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public void hideCard(@PathVariable Long id) {
-        cardService.hideCard(id);
+    @Operation(summary = HIDE_CARD_SUM, description = HIDE_CARD_DESC)
+    public ResponseEntity<String> hideCard(@PathVariable Long id) {
+        if (cardService.hideCard(id)) {
+            return new ResponseEntity<>(
+                    "Card was successfully hidden.",
+                    HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(
+                    "Duplicate request. Card has already been hidden.",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @Operation(
-            summary = "Reveal a Hidden Card",
-            description = "This endpoint allows "
-                    + "an administrator to make a "
-                    + "previously hidden card visible "
-                    + "again. The card to be revealed "
-                    + "is identified by its unique ID "
-                    + "in the path variable.\n\n\n\n"
-                    + "**Roles with Access:**\n\n"
-                    + "- ADMIN (only users with 'ADMIN' "
-                    + "authority can perform this action)\n\n\n\n"
-                    + "**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if "
-                    + "no card is found with the provided ID, "
-                    + "indicating that the card either does "
-                    + "not exist or has been removed."
-    )
-    @PutMapping("/reveal-card/{id}")
+    @GetMapping("/reveal-card/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public void revealCard(@PathVariable Long id) {
-        cardService.revealCard(id);
+    @Operation(summary = REVEAL_CARD_SUM, description = REVEAL_CARD_DESC)
+    public ResponseEntity<String> revealCard(@PathVariable Long id) {
+        if (cardService.revealCard(id)) {
+            return new ResponseEntity<>(
+                    "Card was successfully revealed.",
+                    HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(
+                    "Duplicate request. Card has already been revealed.",
+                    HttpStatus.BAD_REQUEST);
+        }
     }
 
-    @Operation(
-            summary = "Delete a Card",
-            description = "This endpoint allows a " 
-                    + "user with 'USER' authority to " 
-                    + "delete a card. The card is " 
-                    + "identified by its ID, which is " 
-                    + "passed as a path variable. The " 
-                    + "operation is permitted if the user " 
-                    + "has more than one authority or if " 
-                    + "the user is the author of the card.\n\n\n\n"
-                    + "**Roles with Access:**\n\n"
-                    + "- USER (with conditions specified " 
-                    + "in the method's logic)\n\n\n\n"
-                    + "**Possible Exceptions:**\n\n"
-                    + "- `EntityNotFoundException` if the " 
-                    + "card with the given ID or the user with " 
-                    + "the given email does not exist.\n\n"
-                    + "- `AuthorizationException` if the " 
-                    + "authenticated user does not have the " 
-                    + "required authority to delete the card."
-    )
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('USER')")
-    public void deleteCard(@PathVariable Long id, Authentication authentication) {
+    @Operation(summary = DELETE_CARD_SUM, description = DELETE_CARD_DESC)
+    public ResponseEntity<String> deleteCard(@PathVariable Long id, Authentication authentication) {
         cardService.deleteById(id, authentication.getName());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

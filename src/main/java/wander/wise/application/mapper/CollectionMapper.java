@@ -1,5 +1,7 @@
 package wander.wise.application.mapper;
 
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -13,13 +15,10 @@ import wander.wise.application.model.Card;
 import wander.wise.application.model.Collection;
 import wander.wise.application.model.User;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
 @Mapper(config = MapperConfig.class, uses = CardMapper.class)
 public interface CollectionMapper {
     @Mapping(target = "author", source = "user", qualifiedByName = "userToAuthor")
-    @Mapping(target = "cardWithoutDistanceDtos", source = "cards", qualifiedByName = "cardsToCardWithoutDistanceDtos")
+    @Mapping(target = "cardDtos", source = "cards", qualifiedByName = "cardsToCardDtos")
     CollectionDto toDto(Collection collection);
 
     @Mapping(target = "author", source = "user", qualifiedByName = "userToAuthor")
@@ -29,7 +28,8 @@ public interface CollectionMapper {
     Collection toModel(CreateCollectionRequestDto requestDto);
 
     @Mapping(target = "cards", source = "cardIds", qualifiedByName = "cardIdsToCards")
-    Collection updateCollectionFromDto(@MappingTarget Collection collection, UpdateCollectionRequestDto requestDto);
+    Collection updateCollectionFromDto(@MappingTarget Collection collection,
+                                       UpdateCollectionRequestDto requestDto);
 
     @Named("userToAuthor")
     default String userToAuthor(User user) {
@@ -42,6 +42,4 @@ public interface CollectionMapper {
                 .map(Card::new)
                 .collect(Collectors.toSet());
     }
-
-
 }

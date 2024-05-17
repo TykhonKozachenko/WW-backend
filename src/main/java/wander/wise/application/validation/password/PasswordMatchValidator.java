@@ -2,7 +2,6 @@ package wander.wise.application.validation.password;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-
 import java.lang.reflect.Field;
 import java.util.Objects;
 

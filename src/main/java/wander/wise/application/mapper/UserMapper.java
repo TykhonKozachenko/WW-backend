@@ -1,20 +1,17 @@
 package wander.wise.application.mapper;
 
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import wander.wise.application.config.MapperConfig;
-import wander.wise.application.dto.user.registration.RegisterUserRequestDto;
 import wander.wise.application.dto.user.UserDto;
+import wander.wise.application.dto.user.registration.RegisterUserRequestDto;
 import wander.wise.application.dto.user.update.UpdateUserInfoRequestDto;
-import wander.wise.application.model.Collection;
 import wander.wise.application.model.Role;
-import wander.wise.application.model.SocialLink;
 import wander.wise.application.model.User;
-
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Mapper(config = MapperConfig.class)
 public interface UserMapper {

@@ -1,7 +1,20 @@
 package wander.wise.application.service.api.ai;
 
+import static wander.wise.application.constants.AiApiServiceConstants.CLIMATE_LIST;
+import static wander.wise.application.constants.AiApiServiceConstants.FULL_NAME_EXAMPLES;
+import static wander.wise.application.constants.AiApiServiceConstants.FULL_NAME_RULES;
+import static wander.wise.application.constants.AiApiServiceConstants.FULL_NAME_TEMPLATE;
+import static wander.wise.application.constants.AiApiServiceConstants.LIST_FORMATING_RULES;
+import static wander.wise.application.constants.AiApiServiceConstants.LOCATION_NAMES_FIELD_FORMAT;
+import static wander.wise.application.constants.AiApiServiceConstants.MAPPER;
+import static wander.wise.application.constants.AiApiServiceConstants.NON_EXISTING_RESTRICT;
+import static wander.wise.application.constants.AiApiServiceConstants.SEPARATOR;
+import static wander.wise.application.constants.AiApiServiceConstants.SPECIAL_REQUIREMENTS_LIST;
+import static wander.wise.application.constants.AiApiServiceConstants.SPECIFIC_LOCATION_EXAMPLES;
+import static wander.wise.application.constants.AiApiServiceConstants.TOTAL_REQUIRED_RESPONSES_AMOUNT;
+import static wander.wise.application.constants.AiApiServiceConstants.TRIP_TYPES_LIST;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,35 +32,6 @@ import wander.wise.application.exception.custom.AiException;
 @Service
 @RequiredArgsConstructor
 public class AiApiServiceImpl implements AiApiService {
-    private static final String CLIMATE_LIST = "Tropical|Polar|Temperate";
-    private static final String FULL_NAME_EXAMPLES =
-            "Examples: Central park|New York|New York state|USA|North America, "
-                    + "Freedom Square|Kharkiv|Kharkiv Oblast|Ukraine|Europe, "
-                    + "Louvre|Paris|Île-de-France|France|Europe)\",";
-    private static final String FULL_NAME_RULES = "(Double check this field. "
-            + "Fill in each point. Use | between points. ";
-    private static final String FULL_NAME_TEMPLATE = "\"location name|populated locality|"
-            + "region|country|continent";
-    private static final String LIST_FORMATING_RULES = "Give me the list of "
-            + "location. Return information as "
-            + "json object. Use this format: ";
-    private static final String LOCATION_NAMES_FIELD_FORMAT = "\"locationNames\": "
-            + "[\"Location name1|Populated locality|Region|Country|Continent\", "
-            + "\"Location name 2|Populated locality|Region|Country|Continent\", "
-            + "\"Location name 3|Populated locality|Region|Country|Continent\", ect.]";
-    private static final String NON_EXISTING_RESTRICT = "It is important that"
-            + " the locations exist. "
-            + "I will be in danger if travel to non-existing location.";
-    private static final String SEPARATOR = System.lineSeparator();
-    private static final String SPECIAL_REQUIREMENTS_LIST = "With pets|With kids|"
-            + "LGBTQ friendly|Disability.";
-    private static final String SPECIFIC_LOCATION_EXAMPLES = "Examples: square, museum, market, "
-            + "mall, park, certain mountain, bridge, theater, lake, "
-            + "embankment, castle etc.";
-    private static final String TRIP_TYPES_LIST = "Active|Chill|Native culture|"
-            + "Family|Culture|Spiritual|Extreme|Corporate|Nature|Shopping|Romantic|Party";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final int TOTAL_REQUIRED_RESPONSES_AMOUNT = 30;
     private final ChatClient chatClient;
 
     @Override
@@ -366,7 +350,8 @@ public class AiApiServiceImpl implements AiApiService {
         return locationDetailsPrompt.toString();
     }
 
-    private static String getDefineRegionPrompt(CardSearchParameters searchParameters, String paramsJson) {
+    private static String getDefineRegionPrompt(CardSearchParameters searchParameters,
+                                                String paramsJson) {
         return new StringBuilder()
                 .append("I have this json object with search parameters: ")
                 .append(paramsJson)
@@ -383,7 +368,8 @@ public class AiApiServiceImpl implements AiApiService {
                 .toString();
     }
 
-    private static String getDefineContinentPrompt(CardSearchParameters searchParameters, String paramsJson) {
+    private static String getDefineContinentPrompt(CardSearchParameters searchParameters,
+                                                   String paramsJson) {
         return new StringBuilder()
                 .append("I have this json object with search parameters: ")
                 .append(paramsJson)

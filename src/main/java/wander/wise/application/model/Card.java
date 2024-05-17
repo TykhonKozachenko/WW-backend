@@ -41,7 +41,7 @@ public class Card {
     @Column(name = "why_this_place", nullable = false)
     private String whyThisPlace;
     @Column(name = "image_links", nullable = false)
-    private String imageLinks;
+    private String imageLinks = "";
     @Column(name = "map_link", nullable = false)
     private String mapLink;
     @Column(nullable = false)
@@ -53,50 +53,24 @@ public class Card {
     @OneToMany(mappedBy = "card", fetch = FetchType.EAGER)
     private Set<Comment> comments = new HashSet<>();
     private boolean shown = true;
+
     public Card(Long id) {
         this.id = id;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Card card)) return false;
-        return Double.compare(latitude, card.latitude) == 0
-                && Double.compare(longitude, card.longitude) == 0
-                && shown == card.shown
-                && Objects.equals(id, card.id)
-                && Objects.equals(fullName, card.fullName)
-                && Objects.equals(author, card.author)
-                && Objects.equals(tripTypes, card.tripTypes)
-                && Objects.equals(climate, card.climate)
-                && Objects.equals(specialRequirements, card.specialRequirements)
-                && Objects.equals(description, card.description)
-                && Objects.equals(whyThisPlace, card.whyThisPlace)
-                && Objects.equals(imageLinks, card.imageLinks)
-                && Objects.equals(mapLink, card.mapLink)
-                && Objects.equals(likes, card.likes)
-                && Objects.equals(reports, card.reports)
-                && Objects.equals(comments, card.comments);
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Card card)) {
+            return false;
+        }
+        return Objects.equals(id, card.id) && Objects.equals(fullName, card.fullName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(
-                id,
-                fullName,
-                author,
-                tripTypes,
-                climate,
-                specialRequirements,
-                description,
-                whyThisPlace,
-                imageLinks,
-                mapLink,
-                latitude,
-                longitude,
-                likes,
-                reports,
-                comments,
-                shown);
+        return Objects.hash(id, fullName);
     }
 }

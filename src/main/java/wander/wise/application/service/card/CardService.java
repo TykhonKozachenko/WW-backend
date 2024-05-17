@@ -2,32 +2,39 @@ package wander.wise.application.service.card;
 
 import java.util.List;
 import org.springframework.data.domain.Pageable;
-import wander.wise.application.dto.card.*;
+import org.springframework.web.multipart.MultipartFile;
+import wander.wise.application.dto.card.CardDto;
+import wander.wise.application.dto.card.CardSearchParameters;
+import wander.wise.application.dto.card.CreateCardRequestDto;
+import wander.wise.application.dto.card.ReportCardRequestDto;
+import wander.wise.application.dto.card.SearchCardsResponseDto;
 
 public interface CardService {
-    CardWithoutDistanceDto createNewCard(String email, CreateCardRequestDto requestDto);
+    CardDto createNewCard(String email, CreateCardRequestDto requestDto);
 
-    CardWithoutDistanceDto findById(Long id);
+    CardDto findById(Long id);
 
-    CardWithoutDistanceDto updateById(Long id, String email, CreateCardRequestDto requestDto);
+    CardDto updateById(Long id, String email, CreateCardRequestDto requestDto);
 
-    List<CardDto> search(Pageable pageable, CardSearchParameters searchParameters);
+    CardDto addImagesToCardById(Long id, String email, List<MultipartFile> images);
 
-    void postLike(Long id, String email);
+    SearchCardsResponseDto search(Pageable pageable, CardSearchParameters searchParameters);
 
-    void removeLike(Long id, String email);
+    boolean postLike(Long id, String email);
 
-    void hideCard(Long id);
+    boolean removeLike(Long id, String email);
 
-    void revealCard(Long id);
+    boolean hideCard(Long id);
+
+    boolean revealCard(Long id);
 
     void deleteById(Long id, String email);
 
     void report(Long id, String email, ReportCardRequestDto requestDto);
 
-    CardWithoutDistanceDto findByIdAsAdmin(Long id);
+    CardDto findByIdAsAdmin(Long id);
 
-    void addCardToSaved(Long id, String email);
+    boolean addCardToSaved(Long id, String email);
 
-    void removeCardFromSaved(Long id, String email);
+    boolean removeCardFromSaved(Long id, String email);
 }

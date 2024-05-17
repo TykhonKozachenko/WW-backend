@@ -1,36 +1,43 @@
 package wander.wise.application.service.user;
 
 import jakarta.persistence.EntityNotFoundException;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import wander.wise.application.dto.collection.CollectionWithoutCardsDto;
+import wander.wise.application.dto.comment.CommentDto;
 import wander.wise.application.dto.social.link.SocialLinkDto;
+import wander.wise.application.dto.user.UserDto;
 import wander.wise.application.dto.user.login.LoginRequestDto;
 import wander.wise.application.dto.user.login.LoginResponseDto;
 import wander.wise.application.dto.user.registration.RegisterUserRequestDto;
-import wander.wise.application.dto.user.UserDto;
-import wander.wise.application.dto.user.update.*;
+import wander.wise.application.dto.user.update.RestorePasswordRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserEmailRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserInfoRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserPasswordRequestDto;
+import wander.wise.application.dto.user.update.UpdateUserRolesRequestDto;
 import wander.wise.application.exception.custom.AuthorizationException;
 import wander.wise.application.exception.custom.RegistrationException;
 import wander.wise.application.mapper.CollectionMapper;
+import wander.wise.application.mapper.CommentMapper;
 import wander.wise.application.mapper.SocialLinkMapper;
 import wander.wise.application.mapper.UserMapper;
 import wander.wise.application.model.Collection;
 import wander.wise.application.model.Role;
 import wander.wise.application.model.User;
 import wander.wise.application.repository.collection.CollectionRepository;
+import wander.wise.application.repository.comment.CommentRepository;
 import wander.wise.application.repository.user.UserRepository;
 import wander.wise.application.security.AuthenticationService;
 import wander.wise.application.security.JwtUtil;
 import wander.wise.application.service.api.email.EmailService;
-
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.stream.Collectors;
+import wander.wise.application.service.api.storage.StorageService;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +60,9 @@ public class UserServiceImpl implements UserService {
     private final SocialLinkMapper socialLinkMapper;
     private final CollectionRepository collectionRepository;
     private final CollectionMapper collectionMapper;
+    private final StorageService storageService;
+    private final CommentRepository commentRepository;
+    private final CommentMapper commentMapper;
 
     @Override
     public UserDto save(RegisterUserRequestDto requestDto) {
@@ -70,12 +80,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public LoginResponseDto confirmEmail(String email) {
         User updatedUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException(
+                .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find user by email: " + email));
         updatedUser.setBanned(false);
-        userRepository.save(updatedUser);
+        UserDto savedUser = userMapper.toDto(userRepository.save(updatedUser));
         String token = jwtUtil.generateToken(updatedUser.getEmail());
-        return new LoginResponseDto(token);
+        return new LoginResponseDto(savedUser, token);
     }
 
     @Override
@@ -106,6 +116,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Set<CommentDto> getUserComments(Long id, String email) {
+        User user = findUserAndAuthorize(id, email);
+        Set<CommentDto> userComments = commentRepository.getAllByUserEmail(email)
+                .stream()
+                .map(commentMapper::toDto)
+                .collect(Collectors.toSet());
+        return userComments;
+    }
+
+    @Override
     public void restorePassword(RestorePasswordRequestDto requestDto) {
         User updatedUser = userRepository.findByEmail(requestDto.email())
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -131,6 +151,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDto updateUserImage(Long id, String email, MultipartFile userImage) {
+        User updatedUser = findUserAndAuthorize(id, email);
+        if (updatedUser.getProfileImage() != null) {
+            storageService
+                    .deleteFile(updatedUser
+                    .getProfileImage()
+                    .substring(updatedUser
+                            .getProfileImage()
+                            .lastIndexOf("/") + 1));
+        }
+        if (userImage.getSize() == 0) {
+            updatedUser.setProfileImage(null);
+        } else {
+            updatedUser.setProfileImage(storageService.uploadFile(userImage));
+        }
+        return userMapper.toDto(userRepository.save(updatedUser));
+    }
+
+    @Override
     public UserDto updateUserRoles(Long id, UpdateUserRolesRequestDto requestDto) {
         User updatedUser = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -145,7 +184,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDto requestUpdateUserEmail(Long id, String email, UpdateUserEmailRequestDto requestDto) {
+    public UserDto requestUpdateUserEmail(Long id, String email,
+                                          UpdateUserEmailRequestDto requestDto) {
         User updatedUser = findUserAndAuthorize(id, email);
         String confirmCode = sendEmailConfirmCode(requestDto.email());
         UserDto updatedUserDto = userMapper.toDto(updatedUser);
@@ -154,25 +194,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public LoginResponseDto updateUserEmail(Long id, String email, UpdateUserEmailRequestDto requestDto) {
+    public LoginResponseDto updateUserEmail(Long id, String email,
+                                            UpdateUserEmailRequestDto requestDto) {
         User updatedUser = findUserAndAuthorize(id, email);
         updatedUser.setEmail(requestDto.email());
-        userRepository.save(updatedUser);
+        UserDto savedUser = userMapper.toDto(userRepository.save(updatedUser));
         String token = jwtUtil.generateToken(updatedUser.getEmail());
-        return new LoginResponseDto(token);
+        return new LoginResponseDto(savedUser, token);
     }
 
     @Override
-    public UserDto requestUpdateUserPassword(Long id, String email) {
-        User updatedUser = findUserAndAuthorize(id, email);
-        String sentConfirmCode = sendEmailConfirmCode(email);
-        UserDto updatedUserDto = userMapper.toDto(updatedUser);
-        updatedUserDto = updatedUserDto.setEmailConfirmCode(sentConfirmCode);
-        return updatedUserDto;
-    }
-
-    @Override
-    public LoginResponseDto updateUserPassword(Long id, String email, UpdateUserPasswordRequestDto requestDto) {
+    public LoginResponseDto updateUserPassword(Long id, String email,
+                                               UpdateUserPasswordRequestDto requestDto) {
+        LoginRequestDto checkLogin = new LoginRequestDto(email, requestDto.oldPassword());
+        authenticationService.authenticate(checkLogin);
         User updatedUser = findUserAndAuthorize(id, email);
         updatedUser.setPassword(encoder.encode(requestDto.password()));
         userRepository.save(updatedUser);
